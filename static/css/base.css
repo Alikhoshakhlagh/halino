@@ -737,3 +737,77 @@ html:not(.js) .tab.is-active { background: var(--brand); border-radius: var(--ra
   .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tile:nth-child(4n + 1) { grid-column: span 1; grid-template-columns: 1fr; align-items: start; }
 }
+
+/* ============================================================
+   humanize: گرما، تعامل، خوانایی
+   ============================================================ */
+
+/* اسکرول نرم + رنگ انتخاب متن با تم برند */
+html { scroll-behavior: smooth; }
+::selection { background: color-mix(in srgb, var(--brand) 22%, transparent); color: var(--ink); }
+
+/* نام برند در نوار بالا: رنگ برند به جای ink خالص */
+.brand { color: var(--brand); }
+
+/* -------- hover states: فقط روی دستگاه‌هایی با ماوس، نه لمس موبایل -------- */
+@media (hover: hover) {
+
+  /* دکمه‌های معمولی: lift ملایم */
+  .btn:hover:not(:disabled) {
+    box-shadow: var(--elev-2);
+    transform: translateY(-1px);
+  }
+  .btn--primary:hover:not(:disabled) {
+    background: var(--brand-deep);
+    box-shadow:
+      0 1px 2px rgba(27,18,54,.1),
+      0 14px 28px -10px color-mix(in srgb, var(--brand-deep) 65%, transparent),
+      inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  .btn--ghost:hover:not(:disabled) { background: var(--bg-2); }
+  .btn--accent:hover:not(:disabled) { filter: brightness(1.07); }
+
+  /* FAB: کمی بزرگ‌تر در hover */
+  .fab:hover { transform: scale(1.1); }
+
+  /* کارت پیشنهاد: lift و سایه‌ی عمیق‌تر */
+  .rec:hover:not(:has(.btn:hover)):not(:has(form:hover)) {
+    box-shadow: var(--elev-3);
+    transform: translateY(-3px);
+  }
+
+  /* تایل دسته‌بندی */
+  .tile:hover {
+    box-shadow: var(--elev-2);
+    transform: translateY(-2px);
+  }
+
+  /* عنوان آیتم در لیست */
+  .item__title:hover { color: var(--brand); }
+
+}
+
+/* -------- تب‌ها: فونت کمی بزرگ‌تر (۱۱px → ۱۲px) برای خوانایی -------- */
+.tab { font-size: .75rem; }
+
+/* -------- eyebrow: نقطه‌ی رنگی کوچک پیش از متن -------- */
+.eyebrow { display: inline-flex; align-items: center; gap: 6px; }
+.eyebrow::before {
+  content: "";
+  display: block; flex: none;
+  width: 5px; height: 5px; border-radius: var(--radius-full);
+  background: currentColor; opacity: .55;
+}
+
+/* -------- placeholder: کمی محوتر برای contrast بهتر -------- */
+::placeholder { color: var(--muted); opacity: .55; }
+
+/* -------- auth mark: هاله‌ی ملایم برند -------- */
+.auth__mark {
+  box-shadow: var(--elev-2), 0 0 0 12px color-mix(in srgb, var(--brand) 12%, transparent);
+}
+
+/* -------- input در focus: زمینه‌ی خیلی‌ملایم برند -------- */
+.input:focus-visible {
+  background: color-mix(in srgb, var(--brand) 3%, var(--surface));
+}
