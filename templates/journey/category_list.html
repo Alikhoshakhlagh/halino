@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}دسته‌بندی — حالینو{% endblock %}
+
+{% block content %}
+<div>
+  <h1 class="h1">دسته‌بندی‌ها</h1>
+  <p class="note">هر چیزی که می‌شود پیشنهاد داد، اینجاست.</p>
+</div>
+
+<div class="tiles">
+  {% for category in categories %}
+    <a class="tile" style="--c: {{ category.color }}" href="{% url 'category_detail' category.slug %}">
+      <span class="tile__disc" aria-hidden="true"><svg class="icon"><use href="#i-{{ category.slug }}"/></svg></span>
+      <span class="tile__text">
+        <span class="tile__name">{{ category.name }}</span>
+        <span class="tile__n">{{ category.n }} مورد</span>
+      </span>
+    </a>
+  {% endfor %}
+</div>
+
+{% if not user.can_see_places %}
+  <p class="note">دسته‌های مکان‌محور (کافه و پارک) فعلاً فقط برای تهران و اصفهان فعال‌اند. شهرت را از پروفایل عوض کن.</p>
+{% endif %}
+{% endblock %}

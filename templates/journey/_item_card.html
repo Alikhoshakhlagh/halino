@@ -1,0 +1,24 @@
+{# یک ردیف پیشنهاد در فهرست + بازخورد یک‌کلیکه. امتیازدهی در صفحه آیتم پرسیده می‌شود. #}
+<article class="item" style="--c: {{ item.category.color }}">
+  <span class="item__disc" aria-hidden="true">
+    <svg class="icon"><use href="#i-{{ item.category.slug }}"/></svg>
+  </span>
+  <div class="item__body">
+    <span class="item__kicker">{{ item.category.name }}{% if item.duration_minutes %} · حدود {{ item.duration_minutes }} دقیقه{% endif %}</span>
+    <a class="item__title" href="{% url 'item_detail' item.id %}">{{ item.title }}</a>
+    {% if item.subtitle %}<p class="item__meta">{{ item.subtitle }}</p>{% endif %}
+  </div>
+  <div class="item__actions">
+    <form method="post" action="{% url 'item_action' item.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      {% if item.category.is_serial %}
+        <button class="btn btn--small" name="action" value="progress">شروع کردم</button>
+      {% endif %}
+      <button class="btn btn--small btn--accent" name="action" value="done">
+        <svg class="icon icon--sm" aria-hidden="true"><use href="#i-check"/></svg>انجام دادم
+      </button>
+      <button class="btn btn--small btn--ghost" name="action" value="skip">نمی‌خوام</button>
+    </form>
+  </div>
+</article>

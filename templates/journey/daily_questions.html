@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}سؤال‌های روز — حالینو{% endblock %}
+{% block main_class %}main--dq{% endblock %}
+{% block main_attrs %}style="--c: {{ entry.mood.color }}"{% endblock %}
+{% block tabbar %}{% endblock %}
+
+{% block content %}
+{% comment %}
+صفحه‌ی کامل و تمیز بعد از ثبت مود: بدون نوبار، رنگ مود روز به‌عنوان --c، دو جعبه (حال امروزت /
+شرایط امروزت) که هر کدام چند سؤال کوتاه دارند. «ثبت» زیر جعبه‌ی آخر، «بعداً جواب می‌دم» پایین صفحه.
+با ?logged=1 پاپ‌آپ «ثبت شد» یک ثانیه می‌ماند و بعد جعبه‌ها پلکانی می‌آیند.
+{% endcomment %}
+{% if just_logged %}
+  <div class="dq__toast" data-dq-toast hidden role="status">
+    {% include "journey/_face.html" with mood=entry.mood cls="dq__face face--gloss" %}
+    <p class="celebrate__title">حال امروزت ثبت شد</p>
+    <p class="note">{{ entry.mood.name }}</p>
+  </div>
+{% endif %}
+
+<header class="dq__head">
+  <span class="eyebrow">چون امروز حالت {{ entry.mood.name }} است</span>
+  <h1 class="h1">چند سؤال کوتاه دربارهٔ امروز</h1>
+  <p class="note">پیشنهادهای امروزت دقیق‌تر می‌شن.</p>
+</header>
+
+<form method="post" class="dq {% if just_logged %}is-waiting{% endif %}" data-dq data-day="{{ today_iso }}">
+  {% csrf_token %}
+  {% for title, questions in boxes %}
+    <section class="dq__box" aria-labelledby="dq-box-{{ forloop.counter }}">
+      <h2 class="dq__legend" id="dq-box-{{ forloop.counter }}">{{ title }}</h2>
+      {% for question in questions %}
+        <fieldset class="dq__q">
+          <legend class="dq__qtext">{{ question.text }}</legend>
+          <div class="qbox__opts">
+            {% for option in question.options.all %}
+              <label class="qopt">
+                <input type="{% if question.kind == 'multi' %}checkbox{% else %}radio{% endif %}"
+                       name="q{{ question.id }}" value="{{ option.id }}">
+                {{ option.text }}
+              </label>
+            {% endfor %}
+            {% if question.allows_other %}
+              <label class="qopt">
+                <input type="{% if question.kind == 'multi' %}checkbox{% else %}radio{% endif %}" name="q{{ question.id }}" value="other" data-other>
+                مورد دیگه…
+              </label>
+              <input class="input other-input" type="text" name="q{{ question.id }}_other" maxlength="120" placeholder="بنویس…" aria-label="مورد دیگه" data-other-input>
+            {% endif %}
+          </div>
+        </fieldset>
+      {% endfor %}
+    </section>
+  {% endfor %}
+  <button class="btn btn--primary btn--block dq__submit" type="submit">ثبت</button>
+  <a class="dq__skip" href="{% url 'today' %}" data-qskip-link>بعداً جواب می‌دم</a>
+</form>
+{% endblock %}

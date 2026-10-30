@@ -1,0 +1,64 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}حالینو{% endblock %}</title>
+  <meta name="theme-color" content="#FBF7FF">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+  <link rel="icon" href="{% static 'icon.svg' %}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{% static 'icon.svg' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <script>document.documentElement.classList.add("js");</script>
+</head>
+<body>
+{% include "_icons.html" %}
+{% include "journey/_mood_sprite.html" %}
+<div class="app">
+
+  <header class="topbar">
+    <a class="brand" href="{% url 'today' %}">حالینو</a>
+    {% block topbar %}{% endblock %}
+  </header>
+
+  {% if messages %}
+    <ul class="messages" aria-live="polite">
+      {% for message in messages %}<li class="msg msg--{{ message.tags }}">{{ message }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  <main class="main {% block main_class %}{% endblock %}" {% block main_attrs %}{% endblock %}>
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block overlay %}{% endblock %}
+
+  {% block tabbar %}
+  {% if user.is_authenticated and user.onboarding_done %}
+  <nav class="tabbar" aria-label="ناوبری اصلی">
+    <span class="tabbar__pill" aria-hidden="true"></span>
+    <a href="{% url 'today' %}" class="tab {% if nav == 'today' %}is-active{% endif %}" {% if nav == 'today' %}aria-current="page"{% endif %}>
+      <svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>امروز
+    </a>
+    <a href="{% url 'calendar' %}" class="tab {% if nav == 'calendar' %}is-active{% endif %}" {% if nav == 'calendar' %}aria-current="page"{% endif %}>
+      <svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg>تقویم
+    </a>
+    <a href="{% url 'category_list' %}" class="tab {% if nav == 'category' %}is-active{% endif %}" {% if nav == 'category' %}aria-current="page"{% endif %}>
+      <svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>دسته‌بندی
+    </a>
+    <a href="{% url 'profile' %}" class="tab {% if nav == 'profile' %}is-active{% endif %}" {% if nav == 'profile' %}aria-current="page"{% endif %}>
+      <svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>پروفایل
+    </a>
+  </nav>
+  {% endif %}
+  {% endblock %}
+
+</div>
+<script src="{% static 'js/app.js' %}" defer></script>
+</body>
+</html>
