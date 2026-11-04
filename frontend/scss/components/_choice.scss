@@ -11,6 +11,21 @@
   padding: var(--space-3) var(--space-4);
 }
 
+.choice-list--compact {
+  flex-direction: row;
+  flex-wrap: wrap;
+
+  .choice {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+    border-radius: var(--radius-full);
+  }
+
+  .choice__other-input {
+    flex-basis: 100%;
+  }
+}
+
 .choice__other-input {
   margin-top: var(--space-1);
 }

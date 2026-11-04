@@ -49,7 +49,7 @@ function createMoodCard(data) {
         <h2 class="section__title">امروز چه حالی داری؟</h2>
         <p class="note">یکی رو انتخاب کن تا پیشنهادهای متناسب با همون حال باز بشه.</p>
       </div>
-      ${createMoodPicker(data.main_moods, data.more_moods, null)}
+      ${createMoodPicker(data.moods, null)}
     </section>
   `;
 }
@@ -129,7 +129,7 @@ function renderToday(data) {
     createDayItems(data),
   ].join("");
 
-  moodSheetBody.innerHTML = createMoodPicker(data.main_moods, data.more_moods, data.mood);
+  moodSheetBody.innerHTML = createMoodPicker(data.moods, data.mood);
 }
 
 async function loadToday() {
@@ -166,25 +166,7 @@ async function saveMood(form) {
   }
 }
 
-async function handleItemAction(button) {
-  button.disabled = true;
-  try {
-    const data = await sendItemAction(button.dataset.item, button.dataset.action);
-    showToast(data.detail);
-    loadToday();
-  } catch (error) {
-    showToast("ثبت نشد. دوباره امتحان کن.", "error");
-    button.disabled = false;
-  }
-}
-
 document.addEventListener("click", (event) => {
-  const actionButton = event.target.closest("[data-action]");
-  if (actionButton) {
-    handleItemAction(actionButton);
-    return;
-  }
-
   if (event.target.closest("[data-open-mood]")) {
     moodSheet.showModal();
     return;
@@ -194,6 +176,8 @@ document.addEventListener("click", (event) => {
     moodSheet.close();
   }
 });
+
+listenToItemActions(loadToday);
 
 document.addEventListener("change", (event) => {
   if (event.target.name === "mood") {

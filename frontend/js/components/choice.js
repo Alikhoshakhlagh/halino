@@ -1,27 +1,31 @@
-function createChoice(question, value, text, extraAttribute = "") {
+function createChoice(question, value, text, isChecked, extraAttribute = "") {
   const type = question.kind === "multi" ? "checkbox" : "radio";
   return `
     <label class="choice">
-      <input type="${type}" name="q${question.id}" value="${value}" ${extraAttribute}>
+      <input type="${type}" name="q${question.id}" value="${value}" ${isChecked ? "checked" : ""} ${extraAttribute}>
       <span>${escapeHtml(text)}</span>
     </label>
   `;
 }
 
-function createChoiceList(question) {
+function createOtherChoice(question) {
+  const otherText = question.other_text || "";
+  return `
+    ${createChoice(question, "other", "مورد دیگه…", Boolean(otherText), "data-other")}
+    <input class="input choice__other-input" type="text" maxlength="120" placeholder="بنویس…" aria-label="مورد دیگه" value="${escapeHtml(otherText)}" data-other-input ${otherText ? "" : "hidden"}>
+  `;
+}
+
+function createChoiceList(question, extraClass = "") {
+  const selected = question.selected || [];
   const options = question.options
-    .map((option) => createChoice(question, option.id, option.text))
+    .map((option) => createChoice(question, option.id, option.text, selected.includes(option.id)))
     .join("");
 
-  if (!question.allows_other) {
-    return `<div class="choice-list">${options}</div>`;
-  }
-
   return `
-    <div class="choice-list">
+    <div class="choice-list ${extraClass}">
       ${options}
-      ${createChoice(question, "other", "مورد دیگه…", "data-other")}
-      <input class="input choice__other-input" type="text" maxlength="120" placeholder="بنویس…" aria-label="مورد دیگه" data-other-input hidden>
+      ${question.allows_other ? createOtherChoice(question) : ""}
     </div>
   `;
 }
@@ -46,4 +50,7 @@ function syncOtherInput(container) {
   if (!otherChoice || !otherInput) return;
 
   otherInput.hidden = !otherChoice.checked;
+  if (otherChoice.checked) {
+    otherInput.focus();
+  }
 }

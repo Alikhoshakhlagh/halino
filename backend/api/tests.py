@@ -84,7 +84,7 @@ class TodayTests(ApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data["mood"])
         self.assertEqual(response.data["mood_items"], [])
-        self.assertEqual(len(response.data["main_moods"]), 6)
+        self.assertEqual(len(response.data["moods"]), Mood.objects.count())
         self.assertTrue(response.data["day_items"])
 
     def test_set_mood_builds_mood_items(self):

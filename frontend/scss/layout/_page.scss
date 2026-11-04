@@ -16,8 +16,28 @@
   padding-bottom: var(--space-10);
 }
 
+.page-title {
+  @include text-page-title;
+}
+
 .section {
   @include stack(var(--space-4));
+}
+
+.panel {
+  @include card;
+  @include stack(var(--space-5));
+  box-shadow: var(--shadow-card);
+}
+
+.question {
+  @include stack(var(--space-3));
+}
+
+.question__text {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
 }
 
 .section__title {

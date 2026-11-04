@@ -9,18 +9,12 @@ function createMoodChip(mood, currentMood) {
   `;
 }
 
-function createMoodPicker(mainMoods, moreMoods, currentMood) {
-  const mainChips = mainMoods.map((mood) => createMoodChip(mood, currentMood)).join("");
-  const moreChips = moreMoods.map((mood) => createMoodChip(mood, currentMood)).join("");
-  const isMoreOpen = currentMood && moreMoods.some((mood) => mood.id === currentMood.id);
+function createMoodPicker(moods, currentMood) {
+  const chips = moods.map((mood) => createMoodChip(mood, currentMood)).join("");
 
   return `
     <form class="mood-picker" data-mood-form>
-      <div class="mood-grid">${mainChips}</div>
-      <details class="mood-more" ${isMoreOpen ? "open" : ""}>
-        <summary>بیشتر ${createIcon("chevron-down", "icon--small")}</summary>
-        <div class="mood-grid">${moreChips}</div>
-      </details>
+      <div class="mood-grid">${chips}</div>
       <button type="submit" class="btn btn--primary btn--block" ${currentMood ? "" : "disabled"}>
         ${currentMood ? "به‌روزرسانی حال امروز" : "ثبت حال امروز"}
       </button>

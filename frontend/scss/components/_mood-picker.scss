@@ -1,7 +1,7 @@
 @use "../mixins" as *;
 
 .mood-picker {
-  @include stack(var(--space-3));
+  @include stack(var(--space-5));
 }
 
 .mood-grid {
@@ -15,31 +15,4 @@
   padding: var(--space-3) var(--space-1);
   font-size: var(--text-sm);
   text-align: center;
-}
-
-.mood-more {
-  @include stack(var(--space-3));
-
-  summary {
-    @include flex(center, center, var(--space-1));
-    @include focus-ring;
-    min-height: var(--size-touch);
-    font-size: var(--text-sm);
-    color: var(--color-muted);
-    cursor: pointer;
-    list-style: none;
-
-    &::-webkit-details-marker {
-      display: none;
-    }
-  }
-
-  &[open] summary .icon {
-    transform: rotate(180deg);
-  }
-
-  .mood-grid {
-    margin-top: var(--space-3);
-    animation: fade-in var(--duration-base) var(--ease-out);
-  }
 }

@@ -17,9 +17,6 @@ from journey.models import (
 from ..answers import get_questions
 from ..serializers import ItemSerializer, MoodSerializer, OccasionSerializer
 
-MAIN_MOODS_COUNT = 6
-
-
 def get_greeting():
     hour = timezone.localtime().hour
     if hour < 12:
@@ -91,7 +88,6 @@ def today_view(request):
 
     occasion = pick_main_occasion(user, today)
     jalali_year, jalali_month, jalali_day = to_jalali(today)
-    moods = Mood.objects.all()
 
     return Response(
         {
@@ -105,8 +101,7 @@ def today_view(request):
                 "year": jalali_year,
             },
             "occasion": OccasionSerializer(occasion).data if occasion else None,
-            "main_moods": MoodSerializer(moods[:MAIN_MOODS_COUNT], many=True).data,
-            "more_moods": MoodSerializer(moods[MAIN_MOODS_COUNT:], many=True).data,
+            "moods": MoodSerializer(Mood.objects.all(), many=True).data,
             "mood": MoodSerializer(mood_entry.mood).data if mood_entry else None,
             "answered_daily": has_answered_daily(user, today),
             "in_progress": [

@@ -35,6 +35,11 @@
   border-color: var(--color-danger);
 }
 
+.form-actions {
+  @include stack(var(--space-3));
+  align-items: center;
+}
+
 .field-error {
   font-size: var(--text-sm);
   color: var(--color-danger);

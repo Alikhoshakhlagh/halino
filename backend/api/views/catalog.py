@@ -54,6 +54,7 @@ def category_detail_view(request, slug):
     for item in items[:300]:
         row = ItemSerializer(item).data
         status = statuses.get(item.id)
+        row["status"] = status.status if status else ""
         row["status_label"] = status.get_status_display() if status else ""
         rows.append(row)
     return Response({"category": CategorySerializer(category).data, "items": rows})
@@ -64,7 +65,9 @@ def item_detail_view(request, pk):
     item = get_object_or_404(Item.objects.select_related("category", "city"), pk=pk)
     status = UserItemStatus.objects.filter(user=request.user, item=item).first()
     data = ItemSerializer(item).data
+    data["status"] = status.status if status else ""
     data["status_label"] = status.get_status_display() if status else ""
+    data["rating"] = status.rating if status else None
     data["tags"] = [tag.name for tag in item.tags.order_by("-itemtag__weight", "name")[:4]]
     return Response(data)
 

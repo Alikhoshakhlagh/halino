@@ -143,8 +143,6 @@ stepsBox.addEventListener("change", (event) => {
         showStep(stepIndex + 1);
       }
     }, 240);
-  } else if (event.target.hasAttribute("data-other") && event.target.checked) {
-    step.querySelector("[data-other-input]").focus();
   }
 });
 

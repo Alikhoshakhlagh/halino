@@ -10,12 +10,17 @@ const FACES = {
   angry: '<path d="M27 32 l17 8" fill="none" stroke-width="6.5" stroke-linecap="round"/> <path d="M73 32 l-17 8" fill="none" stroke-width="6.5" stroke-linecap="round"/> <circle cx="36" cy="51" r="5"/><circle cx="64" cy="51" r="5"/> <path d="M37 69 q13 -10 26 0" fill="none" stroke-width="6.5" stroke-linecap="round"/>',
 };
 
+function createFaceInner(mood) {
+  return `
+    <circle class="face__disc" cx="50" cy="50" r="50"></circle>
+    <g class="face__ink">${FACES[mood.face] || FACES.calm}</g>
+  `;
+}
+
 function createFace(mood, size = "medium") {
-  const inner = FACES[mood.face] || FACES.calm;
   return `
     <svg class="face face--${size}" data-mood="${mood.face}" viewBox="0 0 100 100" role="img" aria-label="${escapeHtml(mood.name)}">
-      <circle class="face__disc" cx="50" cy="50" r="50"></circle>
-      <g class="face__ink">${inner}</g>
+      ${createFaceInner(mood)}
     </svg>
   `;
 }
