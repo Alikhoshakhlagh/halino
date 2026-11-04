@@ -5,11 +5,9 @@
 """
 
 from datetime import date, timedelta
-from datetime import date as date_cls
 
 from django.core.management import call_command
 from django.test import TestCase
-from django.urls import reverse
 
 from accounts.models import City, User
 from content.models import Category, Item, Occasion, Tag
@@ -256,79 +254,6 @@ class MLTests(TestCase):
         self.assertEqual(ranked[0][1].id, unseen_calm.id)
 
 
-class ViewTests(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        call_command("seed_base", verbosity=0)
-        call_command("import_titles", verbosity=0)
-
-    def setUp(self):
-        self.user = User.objects.create_user(
-            phone="09120000001",
-            city=City.objects.get(slug="tehran"),
-            onboarding_done=True,
-        )
-        self.client.force_login(self.user)
-
-    def test_today_page_renders_both_states(self):
-        response = self.client.get(reverse("today"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "امروز چه حالی داری؟")
-
-        mood = Mood.objects.first()
-        self.client.post(reverse("set_mood"), {"mood": mood.id})
-
-        response = self.client.get(reverse("today"))
-        self.assertContains(response, "حال امروزت")
-
-    def test_onboarding_redirect_for_new_user(self):
-        fresh = User.objects.create_user(phone="09120000002")
-        self.client.force_login(fresh)
-        response = self.client.get(reverse("today"))
-        self.assertRedirects(response, reverse("onboarding"))
-
-    def test_category_list_keeps_order(self):
-        """annotate ترتیب Meta را می‌اندازد؛ ویو باید صریح مرتب کند."""
-        from .views import _visible_categories
-
-        orders = [c.order for c in _visible_categories(self.user)]
-        self.assertEqual(orders, sorted(orders))
-
-    def test_all_main_pages(self):
-        for name in ("calendar", "category_list", "profile"):
-            self.assertEqual(self.client.get(reverse(name)).status_code, 200)
-
-    def test_category_detail_blocked_for_unsupported_city(self):
-        self.user.city = City.objects.get(slug="mashhad")
-        self.user.save()
-        response = self.client.get(reverse("category_detail", args=["cafe"]))
-        self.assertEqual(response.status_code, 404)
-
-    def test_occasion_banner(self):
-        today = date_cls.today()
-        _, jm, jd = gregorian_to_jalali(today.year, today.month, today.day)
-        occasion = Occasion.objects.create(
-            source=Occasion.IRAN, calendar=Occasion.JALALI,
-            month=jm, day=jd, title="روز تست", quote="یک نقل‌قول", priority=99,
-        )
-        occasion.tags.add(Tag.objects.get(slug="calm"))
-        response = self.client.get(reverse("today"))
-        self.assertContains(response, "روز تست")
-        self.assertContains(response, "تقویم ایرانی")
-
-    def test_mood_section_appears_above_day_section(self):
-        """بدون مود فقط «پیشنهاد روز»؛ با مود، «متناسب با حالت» بالای آن می‌آید."""
-        response = self.client.get(reverse("today"))
-        self.assertNotContains(response, "متناسب با حالت")
-        self.assertContains(response, "پیشنهاد روز")
-
-        response = self.client.post(reverse("set_mood"), {"mood": Mood.objects.first().id})
-        self.assertRedirects(response, reverse("daily_questions") + "?logged=1")
-        html = self.client.get(reverse("today")).content.decode()
-        self.assertIn("متناسب با حالت", html)
-        self.assertLess(html.index("متناسب با حالت"), html.index(">پیشنهاد روز<"))
-
-
 class MemoryTests(TestCase):
     """فاز ۲: حافظه‌ی کاربر (learn_from_answers) و تاریخچه‌ی مود در لایه‌ی دوم."""
 
@@ -489,13 +414,6 @@ class DayLayerTests(TestCase):
         self.assertEqual(len(rows), 3)
         self.assertTrue(all(row.occasion_id is None for row in rows))
 
-    def test_today_page_shows_why(self):
-        self.user.onboarding_done = True
-        self.user.save()
-        self.client.force_login(self.user)
-        response = self.client.get(reverse("today"))
-        self.assertContains(response, "به مناسبت")
-
 
 class NeedSlotTests(TestCase):
     """«متناسب با حالت» پویا: ۳ پایه + یک اسلات تضمینی برای هر نیاز امروز."""
@@ -565,150 +483,3 @@ class NeedSlotTests(TestCase):
         entry = self._entry("بی‌حوصله")
         self._answer("چقدر وقت داری؟", "یه ربع")  # long منفی
         self.assertNotIn("screen", engine.today_needs(self.user, entry))
-
-
-class Phase2ViewTests(TestCase):
-    """آنبوردینگ اجباری + «مورد دیگه»، سؤال‌های پروفایل، صفحه‌ی دو سؤال، صفحه‌ی آیتم."""
-
-    @classmethod
-    def setUpTestData(cls):
-        call_command("seed_base", verbosity=0)
-        call_command("import_titles", verbosity=0)
-
-    def setUp(self):
-        self.user = User.objects.create_user(
-            phone="09120000020", city=City.objects.get(slug="tehran")
-        )
-        self.client.force_login(self.user)
-        self.questions = list(
-            Question.objects.filter(scope=Question.ONBOARDING, is_active=True).order_by("order")
-        )
-
-    def _full_payload(self):
-        payload = {"display_name": "تست", "city": self.user.city_id}
-        for question in self.questions:
-            payload[f"q{question.id}"] = question.options.first().id
-        return payload
-
-    def test_onboarding_incomplete_does_not_finish(self):
-        payload = self._full_payload()
-        del payload[f"q{self.questions[-1].id}"]
-        response = self.client.post(reverse("onboarding"), payload)
-        self.assertEqual(response.status_code, 200)  # فرم دوباره نشان داده می‌شود
-        self.user.refresh_from_db()
-        self.assertFalse(self.user.onboarding_done)
-        self.assertFalse(Answer.objects.filter(user=self.user).exists())
-
-    def test_onboarding_other_is_saved_as_free_text(self):
-        other_q = next(q for q in self.questions if q.allows_other)
-        payload = self._full_payload()
-        payload[f"q{other_q.id}"] = "other"
-        payload[f"q{other_q.id}_other"] = "کاردستی"
-        response = self.client.post(reverse("onboarding"), payload)
-        self.assertRedirects(response, reverse("today"))
-        self.user.refresh_from_db()
-        self.assertTrue(self.user.onboarding_done)
-        answer = Answer.objects.get(user=self.user, question=other_q)
-        self.assertIsNone(answer.option)
-        self.assertEqual(answer.free_text, "کاردستی")
-
-    def test_onboarding_other_without_text_is_missing(self):
-        other_q = next(q for q in self.questions if q.allows_other)
-        payload = self._full_payload()
-        payload[f"q{other_q.id}"] = "other"
-        payload[f"q{other_q.id}_other"] = ""
-        self.client.post(reverse("onboarding"), payload)
-        self.user.refresh_from_db()
-        self.assertFalse(self.user.onboarding_done)
-
-    def test_onboarding_only_once(self):
-        self.client.post(reverse("onboarding"), self._full_payload())
-        self.assertRedirects(self.client.get(reverse("onboarding")), reverse("today"))
-
-    def test_profile_shows_only_profile_questions_and_learns(self):
-        self.client.post(reverse("onboarding"), self._full_payload())
-        response = self.client.get(reverse("profile"))
-        self.assertContains(response, "بهتر بشناسیمت")
-        self.assertNotContains(response, "تغییر اهداف و علایق")
-        for question in Question.objects.filter(scope=Question.ONBOARDING):
-            self.assertNotContains(response, question.text)
-        profile_q = Question.objects.filter(scope=Question.PROFILE).first()
-        self.assertContains(response, profile_q.text)
-
-        option = profile_q.options.exclude(optiontag=None).first()
-        tag = option.optiontag_set.first()
-        before = UserTagAffinity.objects.filter(user=self.user, tag_id=tag.tag_id).first()
-        before_weight = before.weight if before else 0.0
-        response = self.client.post(
-            reverse("profile"),
-            {"form": "question", "question": profile_q.id, f"q{profile_q.id}": option.id},
-        )
-        self.assertRedirects(response, reverse("profile"))
-        after = UserTagAffinity.objects.get(user=self.user, tag_id=tag.tag_id)
-        self.assertAlmostEqual(after.weight, before_weight + tag.weight * 0.5)
-        # کارت جواب‌داده‌شده با تیک جمع می‌شود
-        html = self.client.get(reverse("profile")).content.decode()
-        self.assertIn("is-answered", html)
-
-    def test_mood_then_daily_questions_page(self):
-        self.client.post(reverse("onboarding"), self._full_payload())
-        mood = Mood.objects.first()
-        response = self.client.post(reverse("set_mood"), {"mood": mood.id})
-        self.assertRedirects(response, reverse("daily_questions") + "?logged=1")
-
-        response = self.client.get(reverse("daily_questions") + "?logged=1")
-        self.assertContains(response, "حال امروزت ثبت شد")
-        self.assertNotContains(response, 'class="tabbar"')
-        # دو جعبه، هر کدام چند سؤال؛ «بعداً جواب می‌دم» بعد از «ثبت» (پایین صفحه)
-        boxes = response.context["boxes"]
-        self.assertEqual([title for title, _ in boxes], ["حال امروزت", "شرایط امروزت"])
-        daily = [q for _, group in boxes for q in group]
-        self.assertEqual(len(daily), 5)
-        html = response.content.decode()
-        self.assertLess(html.index(">ثبت<"), html.index("بعداً جواب می‌دم"))
-
-        payload = {f"q{q.id}": q.options.first().id for q in daily}
-        self.assertRedirects(self.client.post(reverse("daily_questions"), payload), reverse("today"))
-        self.assertEqual(Answer.objects.filter(user=self.user, question__in=daily).count(), 5)
-        # بعد از جواب دادن، ثبت دوباره‌ی مود به «امروز» برمی‌گردد
-        response = self.client.post(reverse("set_mood"), {"mood": mood.id})
-        self.assertRedirects(response, reverse("today") + "?logged=1")
-
-    def test_item_detail_has_fallback_banner_and_tags(self):
-        self.client.post(reverse("onboarding"), self._full_payload())
-        item = Item.objects.filter(image_url="").exclude(tags=None).first()
-        response = self.client.get(reverse("item_detail", args=[item.id]))
-        self.assertContains(response, "detail__banner--fallback")
-        self.assertContains(response, "actionbar")
-        self.assertContains(response, f"item-title-{item.id}")
-        self.assertLessEqual(len(response.context["tags"]), 4)
-        self.assertContains(response, response.context["tags"][0].name)
-
-    def test_today_has_cowrd_boundary_and_card_links(self):
-        self.client.post(reverse("onboarding"), self._full_payload())
-        response = self.client.get(reverse("today"))
-        self.assertContains(response, 'class="cowrd"')
-        self.assertContains(response, "cowrd__line")
-        self.assertContains(response, "item-art-")
-
-
-class AuthFlowTests(TestCase):
-    def test_otp_login_creates_user_and_sends_to_onboarding(self):
-        response = self.client.post(reverse("login"), {"phone": "09121112233"})
-        self.assertRedirects(response, reverse("verify"))
-
-        from accounts.models import OTPCode
-
-        otp = OTPCode.objects.get(phone="09121112233")
-        response = self.client.post(reverse("verify"), {"code": otp.code})
-        self.assertRedirects(response, reverse("onboarding"))
-        self.assertTrue(User.objects.filter(phone="09121112233").exists())
-
-    def test_wrong_code_is_counted(self):
-        self.client.post(reverse("login"), {"phone": "09121112244"})
-        self.client.post(reverse("verify"), {"code": "000000"})
-
-        from accounts.models import OTPCode
-
-        otp = OTPCode.objects.get(phone="09121112244")
-        self.assertGreaterEqual(otp.attempts, 0)

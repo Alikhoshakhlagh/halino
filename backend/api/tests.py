@@ -1,10 +1,13 @@
 from django.core.management import call_command
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import City, OTPCode, User
-from content.models import Category, Item
-from journey.models import Answer, Mood, MoodEntry, Question, UserItemStatus
+from content.models import Category, Item, Occasion, Tag
+from journey.jalali import to_jalali
+from journey.models import Answer, Mood, Question, UserItemStatus, UserTagAffinity
 
 
 class ApiTestCase(TestCase):
@@ -68,6 +71,13 @@ class AuthTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertTrue(response.data["expired"])
 
+    def test_refresh_token_of_deleted_user_is_rejected(self):
+        user = User.objects.create_user(phone="09120000005")
+        refresh = str(RefreshToken.for_user(user))
+        user.delete()
+        response = self.client.post("/api/auth/token/refresh/", {"refresh": refresh}, format="json")
+        self.assertEqual(response.status_code, 401)
+
     def test_pages_need_login(self):
         self.assertEqual(self.client.get("/api/today/").status_code, 401)
 
@@ -108,6 +118,55 @@ class TodayTests(ApiTestCase):
         ids = [row["item"]["id"] for row in rows]
         self.assertNotIn(skipped_id, ids)
         self.assertTrue(next(row for row in rows if row["item"]["id"] == done_id)["is_done"])
+
+    def test_invalid_mood_is_not_found(self):
+        self.assertEqual(self.client.post("/api/mood/", {"mood": "abc"}, format="json").status_code, 404)
+        self.assertEqual(self.client.post("/api/mood/", {}, format="json").status_code, 404)
+
+    def test_invalid_answers_are_ignored(self):
+        self.client.post("/api/mood/", {"mood": Mood.objects.first().id}, format="json")
+        for answers in ([1], "x", {"1": "x"}, {"1": {"options": 5}}):
+            response = self.client.post("/api/daily-questions/", {"answers": answers}, format="json")
+            self.assertEqual(response.status_code, 200)
+
+    def create_today_occasion(self):
+        _, month, day = to_jalali(timezone.localdate())
+        occasion = Occasion.objects.create(
+            source=Occasion.IRAN,
+            calendar=Occasion.JALALI,
+            month=month,
+            day=day,
+            title="روز تست",
+            quote="یک نقل‌قول",
+            priority=99,
+        )
+        occasion.tags.add(Tag.objects.get(slug="calm"))
+        return occasion
+
+    def test_today_shows_occasion_and_why(self):
+        self.create_today_occasion()
+        data = self.client.get("/api/today/").data
+        self.assertEqual(data["occasion"]["title"], "روز تست")
+        self.assertEqual(data["occasion"]["source_label"], "تقویم ایرانی")
+        self.assertIn("روز تست", [row["because"] for row in data["day_items"]])
+
+    def test_daily_questions_have_two_boxes(self):
+        self.client.post("/api/mood/", {"mood": Mood.objects.first().id}, format="json")
+        data = self.client.get("/api/daily-questions/").data
+        self.assertEqual([box["title"] for box in data["boxes"]], ["حال امروزت", "شرایط امروزت"])
+        self.assertEqual(sum(len(box["questions"]) for box in data["boxes"]), 5)
+
+    def test_mood_after_answering_does_not_ask_again(self):
+        mood = Mood.objects.first()
+        self.client.post("/api/mood/", {"mood": mood.id}, format="json")
+        boxes = self.client.get("/api/daily-questions/").data["boxes"]
+        questions = [question for box in boxes for question in box["questions"]]
+        answers = {str(q["id"]): {"options": [q["options"][0]["id"]]} for q in questions}
+        self.client.post("/api/daily-questions/", {"answers": answers}, format="json")
+        self.assertEqual(Answer.objects.filter(user=self.user, date__isnull=False).count(), 5)
+
+        response = self.client.post("/api/mood/", {"mood": mood.id}, format="json")
+        self.assertFalse(response.data["ask_questions"])
 
     def test_daily_questions_need_mood(self):
         self.assertEqual(self.client.get("/api/daily-questions/").status_code, 404)
@@ -175,6 +234,17 @@ class OnboardingTests(ApiTestCase):
             Answer.objects.filter(question=question, option=None, free_text="متن آزاد").exists()
         )
 
+    def test_other_without_text_does_not_finish(self):
+        question = Question.objects.filter(
+            scope=Question.ONBOARDING, is_active=True, allows_other=True
+        ).first()
+        answers = self.full_answers()
+        answers[str(question.id)] = {"options": [], "other": ""}
+        response = self.client.post("/api/onboarding/", {"answers": answers}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.onboarding_done)
+
     def test_finished_user_gets_done(self):
         self.user.onboarding_done = True
         self.user.save()
@@ -201,8 +271,20 @@ class CalendarTests(ApiTestCase):
     def test_bad_month_uses_current(self):
         self.assertEqual(self.client.get("/api/calendar/?m=abc").status_code, 200)
 
+    def test_bad_year_uses_current(self):
+        self.assertEqual(self.client.get("/api/calendar/?y=99999&m=1").status_code, 200)
+
 
 class CatalogTests(ApiTestCase):
+    def test_categories_keep_order(self):
+        slugs = [row["slug"] for row in self.client.get("/api/categories/").data["categories"]]
+        expected = Category.objects.order_by("order", "name").values_list("slug", flat=True)
+        self.assertEqual(slugs, list(expected))
+
+    def test_item_has_at_most_four_tags(self):
+        item = Item.objects.exclude(tags=None).first()
+        self.assertLessEqual(len(self.client.get(f"/api/items/{item.id}/").data["tags"]), 4)
+
     def test_city_gate_on_categories(self):
         slugs = [row["slug"] for row in self.client.get("/api/categories/").data["categories"]]
         self.assertIn("cafe", slugs)
@@ -252,6 +334,12 @@ class ProfileTests(ApiTestCase):
         self.assertEqual(self.user.display_name, "نیما")
         self.assertEqual(self.user.city, city)
 
+    def test_invalid_city_is_cleared(self):
+        response = self.client.patch("/api/profile/", {"city": "abc"}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.city)
+
     def test_profile_question_is_saved_and_shown(self):
         question = Question.objects.filter(scope=Question.PROFILE, is_active=True).first()
         option = question.options.first()
@@ -264,6 +352,21 @@ class ProfileTests(ApiTestCase):
         row = next(row for row in data["questions"] if row["id"] == question.id)
         self.assertEqual(row["selected"], [option.id])
         self.assertEqual(row["answered"], [option.text])
+
+    def test_profile_question_teaches_affinity(self):
+        question = Question.objects.filter(scope=Question.PROFILE, is_active=True).first()
+        option = question.options.exclude(optiontag=None).first()
+        option_tag = option.optiontag_set.first()
+        self.client.post(
+            f"/api/profile/questions/{question.id}/", {"options": [option.id]}, format="json"
+        )
+        affinity = UserTagAffinity.objects.get(user=self.user, tag_id=option_tag.tag_id)
+        self.assertAlmostEqual(affinity.weight, option_tag.weight * 0.5)
+
+    def test_profile_has_only_profile_questions(self):
+        ids = {row["id"] for row in self.client.get("/api/profile/").data["questions"]}
+        expected = Question.objects.filter(scope=Question.PROFILE, is_active=True)
+        self.assertEqual(ids, set(expected.values_list("id", flat=True)))
 
     def test_empty_profile_question_is_rejected(self):
         question = Question.objects.filter(scope=Question.PROFILE, is_active=True).first()

@@ -12,8 +12,8 @@ from ..serializers import CitySerializer, MoodSerializer, QuestionSerializer
 
 def save_name_and_city(user, data):
     user.display_name = str(data.get("display_name", "")).strip()[:64]
-    city_id = data.get("city") or None
-    user.city = City.objects.filter(pk=city_id).first() if city_id else None
+    city_id = str(data.get("city") or "")
+    user.city = City.objects.filter(pk=city_id).first() if city_id.isdigit() else None
 
 
 @api_view(["GET", "POST"])

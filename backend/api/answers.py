@@ -22,9 +22,16 @@ def get_daily_boxes():
 def build_answers(user, questions, answers, date=None):
     rows = []
     missing = []
+    if not isinstance(answers, dict):
+        answers = {}
+
     for question in questions:
-        answer = answers.get(str(question.id), {})
-        picked = [str(option_id) for option_id in answer.get("options", [])]
+        answer = answers.get(str(question.id))
+        if not isinstance(answer, dict):
+            answer = {}
+
+        options = answer.get("options")
+        picked = [str(option_id) for option_id in options] if isinstance(options, list) else []
         other_text = str(answer.get("other", "")).strip()[:120]
 
         question_rows = []

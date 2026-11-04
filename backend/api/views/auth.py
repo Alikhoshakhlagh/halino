@@ -4,9 +4,18 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from accounts.forms import CodeForm, PhoneForm, normalize_phone
 from accounts.models import OTPCode, User
+
+
+class RefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except User.DoesNotExist:
+            return Response({"detail": "این حساب دیگه وجود نداره."}, status=401)
 
 
 @api_view(["POST"])

@@ -115,7 +115,11 @@ def today_view(request):
 
 @api_view(["POST"])
 def set_mood_view(request):
-    mood = get_object_or_404(Mood, pk=request.data.get("mood"))
+    mood_id = str(request.data.get("mood", ""))
+    mood = get_object_or_404(Mood, pk=mood_id) if mood_id.isdigit() else None
+    if mood is None:
+        return Response({"detail": "این حال پیدا نشد."}, status=404)
+
     today = timezone.localdate()
     entry, _ = MoodEntry.objects.update_or_create(
         user=request.user,

@@ -1,7 +1,7 @@
 # حالینو — راهنمای توسعه
 
 > مرجع فنی پروژه: استک، ساختار، رفتار صفحه‌ها، موتور پیشنهاد و دام‌هایی که سر راه بوده‌اند.
-> آخرین به‌روزرسانی: مهر ۱۴۰۵.
+> آخرین به‌روزرسانی: آبان ۱۴۰۵.
 
 ## ۱. پروژه در یک پاراگراف
 
@@ -14,78 +14,70 @@
 
 | لایه | فناوری | نکته |
 |---|---|---|
-| بک‌اند | **Python + Django 5.2**، تمپلیت‌های جنگو (MVT) | بدون API، بدون DRF |
+| بک‌اند | **Python + Django 5.2 + DRF** | فقط API؛ ورود با JWT (`simplejwt`) و CORS با `django-cors-headers` |
 | دیتابیس | **SQLite** (توسعه) | برای PostgreSQL فقط بلوک `DATABASES` در `config/settings.py` عوض می‌شود |
-| فرانت | **HTML (تمپلیت جنگو) + CSS خالص + JavaScript خالص** | بدون React/Vue، بدون Tailwind/Bootstrap، بدون npm/بیلد، بدون jQuery |
-| آیکون | SVG اینلاین در `templates/_icons.html` (سبک Lucide) | بدون فونت آیکون، بدون CDN |
-| چهره‌های مود | SVG اینلاین در `templates/journey/_mood_sprite.html` | بدون ایموجی |
-| فونت | Vazirmatn از **Google Fonts** | تنها درخواست بیرونی کل اپ؛ بدون اینترنت فالبک سیستمی می‌آید |
-| وابستگی پایتون | فقط `Django` (`requirements.txt`) | هیچ پکیج دیگری |
-
-ویژگی‌های مدرن CSS/JS که استفاده شده (همه بومی مرورگر، بدون کتابخانه): `color-mix()`،
-`:has()`، View Transitions چندسندی، `backdrop-filter`، `scroll-snap`، Web Animations API،
-`IntersectionObserver`. کروم/اج جدید کامل پشتیبانی می‌کنند.
+| فرانت | **HTML + SCSS + JavaScript ساده** | بدون فریم‌ورک؛ فقط `sass` برای ساخت CSS لازم است |
+| آیکون | SVG در `js/components/icon.js` (سبک Lucide) | بدون فونت آیکون، بدون CDN |
+| چهره‌های مود | SVG در `js/components/face.js` | بدون ایموجی |
+| فونت | Vazirmatn لوکال در `frontend/assets/fonts` | بدون درخواست بیرونی |
 
 ## ۳. اجرا
 
 ```bash
-cd halino
+cd backend
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py seed_base        # شهر، تگ، دسته، مود، سؤال، ۱۰ مناسبت ایرانی + ۳۶۷ روز جهانی، آیتم‌های غیرفیلم
 python manage.py import_titles    # ۲۵۰ فیلم/سریال از content/fixtures/top_titles.json
 python manage.py createsuperuser  # پنل ادمین
 python manage.py runserver
-python manage.py test             # ۲۶ تست
+python manage.py test
 ```
 
-- ورود: شماره موبایل → کد OTP در **کنسول چاپ می‌شود و روی صفحه هم نمایش داده می‌شود** (`HALINO_OTP_CONSOLE = True`). سرویس پیامک وصل نیست.
+فرانت: `frontend/index.html` را با Live Server باز کن یا داخل `frontend` بزن
+`python -m http.server 5500`. برای تغییر استایل:
+`sass --watch scss/main.scss css/main.css --no-source-map`.
+
+- ورود: شماره موبایل → کد OTP در **کنسول چاپ می‌شود و روی صفحه‌ی تأیید هم نمایش داده می‌شود** (`HALINO_OTP_CONSOLE = True`). سرویس پیامک وصل نیست.
 - برای اینکه تقویم موقع دمو خالی نباشد: `python manage.py demo_moods 09121234567 --fill 85`
-- کاربر دمو: `09121234567`. کاربر تست دیگر: `09129998877`.
+- کاربر دمو: `09121234567`.
 - `manage.py` خروجی کنسول را UTF-8 می‌کند (کنسول ویندوز cp1256 است و روی فارسی کرش می‌کرد).
 
 ## ۴. ساختار
 
 ```
-config/          settings, urls
-accounts/        User سفارشی (phone = username)، City (is_supported)، OTPCode
-content/         Tag, Category(color, is_serial, needs_city), Item, ItemTag, Occasion, taxonomy.py
-journey/         Mood(face, color, energy, valence), MoodEntry, Question/Option/Answer,
-                 UserTagAffinity, UserItemStatus, DailyRecommendation,
-                 engine.py (موتور), ml.py (Naive Bayes), jalali.py (تقویم شمسی بدون پکیج),
-                 views.py, tests.py, management/commands/{seed_base, demo_moods}
-content/management/commands/import_titles.py
-templates/       base.html, _icons.html, accounts/{login,verify}.html,
-                 journey/{today, calendar, category_list, category_detail, item_detail,
-                 profile, onboarding, daily_questions, _mood_picker, _rec_card, _item_card,
-                 _face, _mood_sprite}.html
-static/css/base.css   (~۵۷۰ خط، فقط تم روشن)   static/js/app.js (~۲۵۰ خط)
-docs/            ERD.md, ml.md, DEVELOPMENT.md (این فایل)
+backend/
+  config/    settings, urls
+  accounts/  User سفارشی (phone = username)، City (is_supported)، OTPCode، forms.py (اعتبارسنجی شماره و کد)
+  content/   Tag, Category(is_serial, needs_city), Item, ItemTag, Occasion, taxonomy.py
+             management/commands/import_titles.py
+  journey/   Mood(face, energy, valence), MoodEntry, Question/Option/Answer,
+             UserTagAffinity, UserItemStatus, DailyRecommendation,
+             engine.py (موتور), ml.py (Naive Bayes), jalali.py (تقویم شمسی بدون پکیج),
+             tests.py, management/commands/{seed_base, demo_moods}
+  api/       urls.py, serializers.py, answers.py, tests.py,
+             views/{auth, today, questions, calendar, catalog, profile}.py
+frontend/
+  index, login, verify, onboarding, daily-questions, calendar, categories,
+  category-detail, item-detail, profile (.html)
+  scss/      main, _root, _mixins, base/, layout/, components/, pages/, animations/
+  js/        config, utils, api, layout, animations, auth/, components/, pages/
+docs/        ERD.md, ml.md, DEVELOPMENT.md (این فایل)
 ```
 
 ## ۵. صفحه‌ها و رفتار فعلی
 
-- **ورود / تأیید کد** — بدون صفحه‌ی ثبت‌نام؛ کاربر جدید بعد از کد به آنبوردینگ می‌رود.
-- **آنبوردینگ** — ویزارد یک‌سؤال‌در‌هر‌مرحله (اسم، شهر، ۶ سؤال). بدون JS یک فرم بلند است.
-- **امروز** (`/`):
-  - هیرو تمام‌عرض: دایره‌ی تاریخ شمسی (۲۴۰px، tilt سه‌بعدی)، زیرش عنوان مناسبت وسط‌چین،
-    چهار لایه‌ی تزئینی از رنگ/نماد مناسبت، لبه‌ی پایین با گرادیان به رنگ صفحه محو می‌شود.
-    مناسبت هیرو = `_hero_occasion()` (بیشترین هم‌پوشانی تگ با علایق کاربر، بعد priority).
-  - **بدون مود:** بخش «امروز چه حالی داری؟» با ۶ مود اصلی (کم‌ترین `order`) + «بیشتر»؛
-    چیپ رادیویی، state انتخاب واضح، دکمه‌ی تأیید.
-  - **بعد از ثبت:** `set_mood` به `/?logged=1` برمی‌گردد → bottom-sheet «حال امروزت ثبت شد»
-    با دکمه‌های «جواب دو سؤال کوتاه؟» / «بعداً». مود فقط روی **FAB** (دکمه‌ی گرد بالای
-    نوبار) دیده می‌شود؛ FAB همان sheet انتخاب/تغییر مود را باز می‌کند.
-  - **دو سؤال روز:** داخل همین صفحه (POST به `daily_questions`). «بعداً» → یک خط ریز
-    پایین صفحه (در `sessionStorage` روزانه نگه داشته می‌شود). صفحه‌ی مستقل
-    `/daily-questions/` هم هنوز کار می‌کند.
-  - **پیشنهادها:** «متناسب با حالت» (فقط با مود، بالا) و «پیشنهاد روز» (همیشه، پایین)،
-    هر دو گرید bento با کارت اول بزرگ. هر کارت: انجام دادم / نمی‌خوام / (شروع کردم برای
-    دسته‌های دنباله‌دار).
-- **تقویم** — گزارش ماهانه (شیشه‌ی مود + راهنمای شمارش)، گرید ماه شمسی با چهره، نمودار
-  نوسان (SVG، محور روزها راست‌به‌چپ)، دو آمار (روز ثبت‌شده، پوشش).
-- **دسته‌بندی** — تایل‌ها (هر چهارتا یکی دوستونه)، صفحه‌ی هر دسته فهرست آیتم‌ها با وضعیت.
-- **پروفایل** — فقط نام، شماره، تنظیمات (ویرایش نام/شهر، تغییر اهداف، لیست «پیشنهاد نده»، خروج).
+- **ورود / تأیید کد** (`login`, `verify`) — بدون صفحه‌ی ثبت‌نام؛ کاربر جدید بعد از کد به آنبوردینگ می‌رود.
+- **آنبوردینگ** (`onboarding`) — اجباری؛ مرحله‌ی اول اسم و شهر و بعد هر سؤال یک مرحله. تا تمام نشود وارد برنامه نمی‌شود.
+- **امروز** (`index`):
+  - **بدون مود:** کارت «امروز چه حالی داری؟» با هر ۹ مود در شبکه‌ی ۳×۳ و دکمه‌ی تأیید.
+  - **با مود:** چهره‌ی مود بالای صفحه است و زدنش شیت تغییر مود را باز می‌کند؛ اگر سؤال‌های روز جواب داده نشده باشند یک لینک به آن‌ها دیده می‌شود.
+  - **پیشنهادها:** «در حال انجام»، «متناسب با حالت» (فقط با مود) و «پیشنهاد روز». هر ردیف تیک انجام و ضربدر «نمی‌خوام» دارد؛ انجام‌شده علامت می‌خورد و ردشده حذف می‌شود.
+- **سؤال‌های روز** (`daily-questions`) — اختیاری؛ بعد از ثبت مود باز می‌شود، دو جعبه دارد و «بعداً جواب می‌دم» به امروز برمی‌گردد.
+- **تقویم** (`calendar`) — گزارش ماهانه (راهنما و شیشه‌ی مود)، گرید ماه شمسی با چهره، نمودار نوسان و سه آمار.
+- **دسته‌ها** (`categories`, `category-detail`) — تایل‌ها و فهرست آیتم‌های هر دسته با وضعیت.
+- **آیتم** (`item-detail`) — بنر، تگ‌ها، توضیح، امتیاز، انجام دادم / شروع کردم (دنباله‌دارها) / دیگه پیشنهاد نده.
+- **پروفایل** (`profile`) — «بهتر بشناسیمت» (سؤال‌های scope=profile)، ویرایش اسم و شهر، موارد ردشده با «برگردون» و خروج.
 
 ## ۶. موتور پیشنهاد (`journey/engine.py`) — قوانین را عوض نکن
 
@@ -115,20 +107,15 @@ Multinomial Naive Bayes به‌ازای هر کاربر، پایتون خالص.
 از طریق `_select(..., rerank=ml.reranker(user, mood))`: امتیاز قاعده‌محور × احتمال.
 زیر **۱۰** رکورد بازخورد غیرفعال. تست: `MLTests` در `journey/tests.py`.
 
-## ۸. سیستم طراحی (`static/css/base.css`)
+## ۸. سیستم طراحی (`frontend/scss`)
 
-- **فقط تم روشن.** پالت: بنفش `#7C5CFF` برند، `#4CC9F0`، `#F472B6`، `#FFC93C`، `#FF6B6B`،
-  `#34D399`؛ زمینه `#FBF7FF`؛ متن `#1B1236` (هرگز سیاه خالص).
-- **رنگ از دیتابیس می‌آید:** `Category.color` و `Mood.color` → `style="--c: ..."` روی المان،
-  CSS با `color-mix()` تینت/سایه می‌سازد. دسته‌ی جدید در ادمین خودش رنگ می‌گیرد.
-- آیکون دسته از **slug** می‌آید: `<use href="#i-{{ category.slug }}">`. دسته‌ی جدید با
-  slug ناشناخته آیکون ندارد → یک `<symbol id="i-<slug>">` به `_icons.html` اضافه کن.
-- توکن‌ها: فاصله ۸pt (`--space-*`)، تایپ (`--text-*`، Vazirmatn 700 نمایش / 400 و 500 متن)،
-  شعاع ۱۲–۳۲px، سه سطح ارتفاع `--elev-1/2/3` (سایه‌ی نرم لایه‌ای + هایلایت داخلی)،
-  حرکت `--dur-1/2/3` = ۱۵۰/۲۴۰/۴۰۰ms با یک `--ease`.
-- فقط logical properties (`inline-start/end`)؛ rem برای فاصله/فونت، px برای شعاع/بوردر.
-- انیمیشن فقط با هدف (ورود پلکانی، تغییر state، بازخورد لمس، انتقال صفحه)؛ همه پشت
-  `prefers-reduced-motion`. بدون JS همه‌چیز کار می‌کند.
+- **فقط تم روشن، مینیمال و پاستیلی.** همه‌ی رنگ‌ها فقط در `_root.scss` هستند؛ زرد برای پس‌زمینه استفاده نمی‌شود.
+- **رنگ مود و دسته از نوعشان می‌آید:** `data-mood` و `data-category` → `base/_data-colors.scss` متغیر `--c` را از `:root` می‌گذارد. فیلد `color` دیتابیس روی UI اثری ندارد. دسته‌ی جدید رنگ پیش‌فرض می‌گیرد مگر اینکه به `$categories` و `:root` اضافه شود.
+- آیکون دسته از **slug** می‌آید: `createIcon(category.slug)`. برای slug ناشناخته آیکون tag کشیده می‌شود؛ آیکون جدید را به `js/components/icon.js` اضافه کن.
+- توکن‌ها: فاصله (`--space-*`)، تایپ (`--text-*`، متن اصلی ۱۵px)، شعاع (`--radius-*`)، حرکت (`--duration-*`).
+- استایل‌های مشترک در `_mixins.scss`: `flex`، `stack`، `grid`، `card`، `square`، `pressable`، `selectable`، `enter-list`.
+- فقط logical properties؛ کنتراست متن‌ها حداقل ۴.۵:۱.
+- انیمیشن تا جای ممکن با CSS است و همه پشت `prefers-reduced-motion` هستند.
 
 ## ۹. حریم داده — قانون UI
 
@@ -137,17 +124,13 @@ Multinomial Naive Bayes به‌ازای هر کاربر، پایتون خالص.
 
 ## ۱۰. دام‌هایی که دو بار گزیدند
 
-- کامنت `{# ... #}` جنگو **چندخطی نیست** — چندخطی را با `{% comment %}` بنویس، وگرنه متن روی صفحه چاپ می‌شود.
 - کلاسی که `display` ست می‌کند بر `[hidden]` مرورگر غلبه می‌کند → ریست دارد `[hidden]{display:none!important}`.
 - `annotate()` ترتیب `Meta.ordering` را می‌اندازد → بعدش `order_by` صریح.
-- `|default:"—"` روی صفر هم عمل می‌کند → برای اعداد `default_if_none`.
-- `requestAnimationFrame` در تب پنهان می‌ایستد → شمارنده‌ها fallback با `setTimeout` دارند.
 - مدل `User` سفارشی است؛ هیچ‌وقت با `User` پیش‌فرض migrate نکن.
 
 ## ۱۱. کارهای باز
 
 - سرویس پیامک واقعی برای OTP + هش کردن کد.
-- فایل فونت وزیرمتن لوکال (فعلاً Google Fonts).
 - مستندات دانشگاهی (گزارش، ارائه) — هنوز نوشته نشده.
 - تقویم روزهای جهانی (`content/national_days.py`) برای هر روز یک مناسبت دارد که دستی انتخاب شده؛ نقل‌قول بیشترشان خالی است و از ادمین قابل ویرایش/افزایش.
 - انتقال به PostgreSQL برای تحویل نهایی.

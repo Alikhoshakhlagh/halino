@@ -18,6 +18,10 @@ from journey.models import Mood, MoodEntry
 from ..serializers import MoodSerializer
 
 
+MIN_YEAR = 1300
+MAX_YEAR = 1500
+
+
 def get_requested_month(request, today):
     current_year, current_month, _ = to_jalali(today)
     try:
@@ -27,6 +31,8 @@ def get_requested_month(request, today):
         return current_year, current_month
     if not 1 <= month <= 12:
         month = current_month
+    if not MIN_YEAR <= year <= MAX_YEAR:
+        year = current_year
     return year, month
 
 
