@@ -1,0 +1,16 @@
+@use "../mixins" as *;
+
+.choice-list {
+  @include stack(var(--space-2));
+}
+
+.choice {
+  @include selectable;
+  display: block;
+  min-height: var(--size-touch);
+  padding: var(--space-3) var(--space-4);
+}
+
+.choice__other-input {
+  margin-top: var(--space-1);
+}

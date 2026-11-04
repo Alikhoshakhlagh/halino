@@ -51,6 +51,7 @@ async function apiRequest(endpoint, method = "GET", body = null) {
     const refreshed = await tryRefreshToken();
     if (!refreshed) {
       logout();
+      throw new Error("logged out");
     }
     response = await sendRequest(endpoint, method, body);
   }

@@ -12,7 +12,7 @@ function renderTabbar(activeTab) {
     const isActive = tab.id === activeTab;
     return `
       <a href="${tab.href}" class="tabbar__link ${isActive ? "tabbar__link--active" : ""}" ${isActive ? 'aria-current="page"' : ""}>
-        ${createIcon(tab.icon)}
+        ${createIcon(tab.icon, "icon--small")}
         ${tab.label}
       </a>
     `;

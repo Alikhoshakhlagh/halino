@@ -16,7 +16,8 @@
 .input {
   @include focus-ring;
   width: 100%;
-  min-height: 3.25rem;
+  min-height: 3rem;
+  font-size: 1rem;
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
   border: 1px solid var(--color-line);

@@ -2,7 +2,7 @@ function createMoodChip(mood, currentMood) {
   const isChecked = currentMood && currentMood.id === mood.id;
   return `
     <label class="mood-chip">
-      <input class="mood-chip__input" type="radio" name="mood" value="${mood.id}" ${isChecked ? "checked" : ""}>
+      <input type="radio" name="mood" value="${mood.id}" ${isChecked ? "checked" : ""}>
       ${createFace(mood)}
       <span>${escapeHtml(mood.name)}</span>
     </label>

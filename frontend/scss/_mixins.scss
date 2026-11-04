@@ -72,6 +72,29 @@
   }
 }
 
+@mixin selectable {
+  @include pressable;
+  background: var(--color-surface);
+  border: 2px solid var(--color-line);
+  border-radius: var(--radius-md);
+
+  &:has(input:checked) {
+    border-color: var(--color-primary-strong);
+    font-weight: var(--weight-medium);
+  }
+
+  &:has(input:focus-visible) {
+    outline: 2px solid var(--color-primary-strong);
+    outline-offset: 2px;
+  }
+
+  input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
 @mixin enter-list($count: 6) {
   animation: fade-up var(--duration-base) var(--ease-out) both;
 
