@@ -1,0 +1,19 @@
+$moods: happy, calm, focused, tired, bored, longing, anxious, sad, angry;
+$categories: film, series, book, podcast, article, cafe, sport, meditation, writing, game;
+
+[data-mood],
+[data-category] {
+  --c: var(--tint-sand);
+}
+
+@each $mood in $moods {
+  [data-mood="#{$mood}"] {
+    --c: var(--mood-#{$mood});
+  }
+}
+
+@each $category in $categories {
+  [data-category="#{$category}"] {
+    --c: var(--cat-#{$category});
+  }
+}

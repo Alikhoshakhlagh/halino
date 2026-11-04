@@ -5,7 +5,14 @@ from rest_framework.response import Response
 
 from journey import engine
 from journey.jalali import MONTH_NAMES, WEEKDAY_NAMES, jalali_weekday, to_jalali
-from journey.models import Answer, DailyRecommendation, Mood, MoodEntry, Question
+from journey.models import (
+    Answer,
+    DailyRecommendation,
+    Mood,
+    MoodEntry,
+    Question,
+    UserItemStatus,
+)
 
 from ..answers import get_questions
 from ..serializers import ItemSerializer, MoodSerializer, OccasionSerializer
@@ -34,10 +41,25 @@ def pick_main_occasion(user, date):
     return max(occasions, key=lambda occasion: (overlap(occasion), occasion.priority))
 
 
-def recommendation_data(row):
-    data = {"item": ItemSerializer(row.item).data, "because": ""}
-    if row.occasion_id:
-        data["because"] = row.occasion.title
+def recommendation_list(user, rows):
+    statuses = dict(
+        UserItemStatus.objects.filter(
+            user=user, item__in=[row.item_id for row in rows]
+        ).values_list("item_id", "status")
+    )
+
+    data = []
+    for row in rows:
+        status = statuses.get(row.item_id)
+        if status == UserItemStatus.SKIPPED:
+            continue
+        data.append(
+            {
+                "item": ItemSerializer(row.item).data,
+                "because": row.occasion.title if row.occasion_id else "",
+                "is_done": status == UserItemStatus.DONE,
+            }
+        )
     return data
 
 
@@ -90,8 +112,8 @@ def today_view(request):
             "in_progress": [
                 ItemSerializer(row.item).data for row in engine.active_serial_items(user)
             ],
-            "mood_items": [recommendation_data(row) for row in mood_rows],
-            "day_items": [recommendation_data(row) for row in day_rows],
+            "mood_items": recommendation_list(user, mood_rows),
+            "day_items": recommendation_list(user, day_rows),
         }
     )
 

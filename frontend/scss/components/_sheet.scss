@@ -1,0 +1,33 @@
+@use "../mixins" as *;
+
+.sheet {
+  width: 100%;
+  max-width: var(--size-page);
+  max-height: 90dvh;
+  margin: auto auto 0;
+  padding: var(--space-6);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  border: 0;
+  border-start-start-radius: var(--radius-lg);
+  border-start-end-radius: var(--radius-lg);
+  overflow-y: auto;
+
+  &[open] {
+    animation: sheet-up var(--duration-base) var(--ease-out);
+  }
+
+  &::backdrop {
+    background: var(--color-backdrop);
+    animation: fade-in var(--duration-base) var(--ease-out);
+  }
+}
+
+.sheet__head {
+  @include flex(space-between, center, var(--space-3));
+  margin-bottom: var(--space-5);
+}
+
+.sheet__title {
+  @include text-title;
+}

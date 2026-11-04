@@ -1,0 +1,25 @@
+@use "../mixins" as *;
+
+.toast-box {
+  @include stack(var(--space-2));
+  position: fixed;
+  inset-block-start: var(--space-4);
+  inset-inline: var(--space-4);
+  z-index: 20;
+  max-width: calc(var(--size-page) - var(--space-8));
+  margin-inline: auto;
+  pointer-events: none;
+}
+
+.toast {
+  @include card(var(--color-surface), var(--space-3) var(--space-4));
+  font-size: var(--text-sm);
+  text-align: center;
+  box-shadow: var(--shadow-float);
+  animation: fade-up var(--duration-base) var(--ease-out);
+}
+
+.toast--error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}

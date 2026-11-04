@@ -1,0 +1,14 @@
+$font-weights: (
+  "Regular": 400,
+  "Medium": 500,
+  "Bold": 700,
+);
+
+@each $name, $weight in $font-weights {
+  @font-face {
+    font-family: "Vazirmatn";
+    src: url("../assets/fonts/Vazirmatn-#{$name}.ttf") format("truetype");
+    font-weight: $weight;
+    font-display: swap;
+  }
+}

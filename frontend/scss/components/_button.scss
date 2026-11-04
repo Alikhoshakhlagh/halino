@@ -1,0 +1,49 @@
+@use "../mixins" as *;
+
+.btn {
+  @include flex(center, center, var(--space-2));
+  @include pressable;
+  min-height: var(--size-touch);
+  padding: var(--space-3) var(--space-6);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-md);
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btn--primary {
+  background: var(--color-primary);
+
+  &:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+  }
+}
+
+.btn--ghost {
+  background: var(--color-surface-soft);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.icon-btn {
+  @include square(var(--size-touch));
+  @include pressable;
+  color: var(--color-muted);
+
+  &:hover {
+    background: var(--color-surface-soft);
+  }
+}
+
+.link {
+  @include focus-ring;
+  font-size: var(--text-sm);
+  color: var(--color-primary-strong);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}

@@ -1,0 +1,64 @@
+@use "../mixins" as *;
+
+.mood-picker {
+  @include stack(var(--space-3));
+}
+
+.mood-grid {
+  @include grid(3, var(--space-2));
+}
+
+.mood-chip {
+  @include stack(var(--space-1));
+  @include pressable;
+  align-items: center;
+  padding: var(--space-3) var(--space-1);
+  font-size: var(--text-sm);
+  text-align: center;
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+
+  &:has(input:checked) {
+    border-color: var(--color-primary-strong);
+    font-weight: var(--weight-medium);
+  }
+
+  &:has(input:focus-visible) {
+    outline: 2px solid var(--color-primary-strong);
+    outline-offset: 2px;
+  }
+}
+
+.mood-chip__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mood-more {
+  @include stack(var(--space-3));
+
+  summary {
+    @include flex(center, center, var(--space-1));
+    @include focus-ring;
+    min-height: var(--size-touch);
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  &[open] summary .icon {
+    transform: rotate(180deg);
+  }
+
+  .mood-grid {
+    margin-top: var(--space-3);
+    animation: fade-in var(--duration-base) var(--ease-out);
+  }
+}

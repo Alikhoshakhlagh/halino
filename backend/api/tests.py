@@ -97,6 +97,18 @@ class TodayTests(ApiTestCase):
         self.assertEqual(response.data["mood"]["id"], mood.id)
         self.assertTrue(response.data["mood_items"])
 
+    def test_done_item_is_marked_and_skipped_item_is_hidden(self):
+        rows = self.client.get("/api/today/").data["day_items"]
+        done_id = rows[0]["item"]["id"]
+        skipped_id = rows[1]["item"]["id"]
+        self.client.post(f"/api/items/{done_id}/action/", {"action": "done"}, format="json")
+        self.client.post(f"/api/items/{skipped_id}/action/", {"action": "skip"}, format="json")
+
+        rows = self.client.get("/api/today/").data["day_items"]
+        ids = [row["item"]["id"] for row in rows]
+        self.assertNotIn(skipped_id, ids)
+        self.assertTrue(next(row for row in rows if row["item"]["id"] == done_id)["is_done"])
+
     def test_daily_questions_need_mood(self):
         self.assertEqual(self.client.get("/api/daily-questions/").status_code, 404)
 

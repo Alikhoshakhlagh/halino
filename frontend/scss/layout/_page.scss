@@ -1,0 +1,42 @@
+@use "../mixins" as *;
+
+.page {
+  @include stack(var(--space-10));
+  width: 100%;
+  max-width: var(--size-page);
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-6) calc(var(--size-tabbar) + var(--space-12));
+
+  > * {
+    @include enter-list;
+  }
+}
+
+.page--no-tabbar {
+  padding-bottom: var(--space-10);
+}
+
+.section {
+  @include stack(var(--space-4));
+}
+
+.section__title {
+  @include text-title;
+}
+
+.section__eyebrow {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.note {
+  @include text-note;
+}
+
+.page-error {
+  @include stack(var(--space-4));
+  align-items: center;
+  padding-block: var(--space-12);
+  text-align: center;
+}

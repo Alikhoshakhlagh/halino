@@ -1,0 +1,41 @@
+@use "../mixins" as *;
+
+.today-head {
+  @include flex(space-between, center, var(--space-4));
+}
+
+.today-head__title {
+  @include text-page-title;
+  font-size: var(--text-xl);
+}
+
+.today-head__mood {
+  @include pressable;
+  border-radius: 50%;
+}
+
+.mood-card {
+  @include card(var(--color-primary-soft));
+  @include stack(var(--space-5));
+}
+
+.occasion-card {
+  @include card(var(--color-surface));
+  @include stack(var(--space-2));
+  box-shadow: var(--shadow-card);
+}
+
+.occasion-card__title {
+  @include text-title;
+}
+
+.questions-link {
+  @include flex(flex-start, center, var(--space-3));
+  @include card(var(--tint-lilac), var(--space-4));
+  @include pressable;
+  font-size: var(--text-sm);
+
+  .icon:last-child {
+    margin-inline-start: auto;
+  }
+}

@@ -1,0 +1,32 @@
+@use "../mixins" as *;
+
+.auth {
+  justify-content: center;
+  min-height: 100dvh;
+  padding-bottom: var(--space-10);
+}
+
+.auth__faces {
+  @include flex(flex-start, center, var(--space-2));
+}
+
+.auth__intro {
+  @include stack(var(--space-3));
+}
+
+.auth__title {
+  @include text-page-title;
+}
+
+.auth__lead {
+  color: var(--color-muted);
+}
+
+.auth__box {
+  @include stack(var(--space-5));
+}
+
+.auth__dev-code {
+  @include card(var(--color-primary-soft), var(--space-3) var(--space-4));
+  font-size: var(--text-sm);
+}

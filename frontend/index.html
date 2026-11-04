@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fbf9f5">
+  <title>امروز | حالینو</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+  <main class="page" id="today-page">
+    <div class="skeleton skeleton--title"></div>
+    <div class="skeleton skeleton--card"></div>
+    <div class="skeleton skeleton--row"></div>
+    <div class="skeleton skeleton--row"></div>
+  </main>
+
+  <dialog class="sheet" id="mood-sheet" aria-labelledby="mood-sheet-title">
+    <div class="sheet__head">
+      <h2 class="sheet__title" id="mood-sheet-title">حال امروزت رو عوض می‌کنی؟</h2>
+      <button type="button" class="icon-btn" data-close-sheet aria-label="بستن">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="mood-sheet-body"></div>
+  </dialog>
+
+  <div id="tabbar-placeholder"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/components/icon.js"></script>
+  <script src="js/components/face.js"></script>
+  <script src="js/components/item-row.js"></script>
+  <script src="js/components/mood-picker.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/today.js"></script>
+</body>
+</html>
