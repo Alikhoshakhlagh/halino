@@ -1,5 +1,6 @@
 """تنظیمات پروژه حالینو — نسخه دانشگاهی، ساده و بدون وابستگی بیرونی."""
 
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,14 +17,18 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
+    "corsheaders",
     "accounts",
     "content",
     "journey",
+    "api",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -85,3 +90,22 @@ HALINO_PROFILE_SLOTS = 3
 HALINO_MOOD_SLOTS = 3
 # تا این تعداد روز، یک آیتم دوباره پیشنهاد نمی‌شود
 HALINO_REPEAT_COOLDOWN_DAYS = 30
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+}
+
+CORS_ALLOW_ALL_ORIGINS = True
