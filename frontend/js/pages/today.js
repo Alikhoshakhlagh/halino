@@ -2,8 +2,8 @@ requireLogin();
 renderTabbar("today");
 
 const page = document.getElementById("today-page");
-const moodSheet = document.getElementById("mood-sheet");
-const moodSheetBody = document.getElementById("mood-sheet-body");
+const moodSheet = createMoodSheet();
+let todayData = null;
 
 function createHeader(data) {
   const name = data.display_name ? `، ${escapeHtml(data.display_name)}` : "";
@@ -129,7 +129,7 @@ function renderToday(data) {
     createDayItems(data),
   ].join("");
 
-  moodSheetBody.innerHTML = createMoodPicker(data.moods, data.mood);
+  todayData = data;
 }
 
 async function loadToday() {
@@ -168,28 +168,11 @@ async function saveMood(form) {
 
 document.addEventListener("click", (event) => {
   if (event.target.closest("[data-open-mood]")) {
-    moodSheet.showModal();
-    return;
-  }
-
-  if (event.target.closest("[data-close-sheet]") || event.target === moodSheet) {
-    moodSheet.close();
+    openMoodSheet(moodSheet, "حال امروزت رو عوض می‌کنی؟", todayData.moods, todayData.mood);
   }
 });
 
 listenToItemActions(loadToday);
-
-document.addEventListener("change", (event) => {
-  if (event.target.name === "mood") {
-    event.target.form.querySelector("button[type=submit]").disabled = false;
-  }
-});
-
-document.addEventListener("submit", (event) => {
-  if (event.target.matches("[data-mood-form]")) {
-    event.preventDefault();
-    saveMood(event.target);
-  }
-});
+listenToMoodForms(saveMood);
 
 loadToday();

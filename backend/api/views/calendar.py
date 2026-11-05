@@ -58,6 +58,7 @@ def calendar_view(request):
         days.append(
             {
                 "day": day,
+                "date": current_date.isoformat(),
                 "mood": MoodSerializer(entry.mood).data if entry else None,
                 "is_today": current_date == today,
                 "is_future": current_date > today,
@@ -87,6 +88,7 @@ def calendar_view(request):
             "month": month,
             "month_name": MONTH_NAMES[month - 1],
             "first_weekday": jalali_weekday(first_date),
+            "moods": MoodSerializer(moods_by_id.values(), many=True).data,
             "days": days,
             "legend": legend,
             "dominant": legend[0]["mood"] if legend else None,

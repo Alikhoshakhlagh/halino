@@ -1190,6 +1190,25 @@ fieldset {
   border-radius: 50%;
 }
 
+.calendar__cell {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+button.calendar__cell {
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
+}
+button.calendar__cell:focus-visible {
+  outline: 2px solid var(--color-primary-strong);
+  outline-offset: 2px;
+}
+button.calendar__cell:active {
+  transform: scale(0.97);
+}
+
 .calendar__cell--future {
   opacity: 0.5;
 }

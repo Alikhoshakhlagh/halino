@@ -2,7 +2,10 @@ requireLogin();
 renderTabbar("calendar");
 
 const page = document.getElementById("calendar-page");
+const moodSheet = createMoodSheet();
 const WEEK_DAYS = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+let calendarData = null;
+let selectedDay = null;
 
 function createMonthLink(month, iconName, label) {
   return `
@@ -75,29 +78,40 @@ function createReport(data) {
   `;
 }
 
-function createDayCell(day) {
+function getDayTitle(day, monthName) {
+  return `${toFarsiNumber(day.day)} ${monthName}`;
+}
+
+function createDayCell(day, monthName) {
   const classes = ["calendar__cell"];
   if (day.is_today) classes.push("calendar__cell--today");
   if (day.is_future) classes.push("calendar__cell--future");
 
+  const number = `<span class="calendar__day">${toFarsiNumber(day.day)}</span>`;
   const face = day.mood ? createFace(day.mood, "fill") : `<span class="calendar__empty"></span>`;
-  const label = day.is_today ? `<span class="visually-hidden">امروز</span>` : "";
+
+  if (day.is_future) {
+    return `<div class="${classes.join(" ")}">${number}${face}</div>`;
+  }
+
+  const moodName = day.mood ? escapeHtml(day.mood.name) : "ثبت نشده";
+  const todayLabel = day.is_today ? "امروز، " : "";
   return `
-    <div class="${classes.join(" ")}">
-      <span class="calendar__day">${toFarsiNumber(day.day)}${label}</span>
-      ${face}
-    </div>
+    <button type="button" class="${classes.join(" ")}" data-day="${day.day}" aria-label="${todayLabel}${getDayTitle(day, monthName)}، ${moodName}">
+      ${number}${face}
+    </button>
   `;
 }
 
 function createCalendar(data) {
   const heads = WEEK_DAYS.map((name) => `<span class="calendar__head">${name}</span>`).join("");
   const blanks = `<span></span>`.repeat(data.first_weekday);
-  const days = data.days.map(createDayCell).join("");
+  const days = data.days.map((day) => createDayCell(day, data.month_name)).join("");
 
   return `
     <section class="panel">
       <div class="calendar">${heads}${blanks}${days}</div>
+      <p class="note">روی هر روز بزن تا حالش رو ثبت کنی یا تغییر بدی.</p>
     </section>
   `;
 }
@@ -147,10 +161,11 @@ function getMonthQuery() {
 async function loadCalendar() {
   try {
     const data = await apiRequest(ENDPOINTS.calendar + getMonthQuery());
+    calendarData = data;
     page.innerHTML = [
       createHeader(data),
-      createReport(data),
       createCalendar(data),
+      createReport(data),
       createChartSection(data),
       createStats(data),
     ].join("");
@@ -160,4 +175,38 @@ async function loadCalendar() {
   }
 }
 
+async function saveDayMood(form) {
+  const submitButton = form.querySelector("button[type=submit]");
+  const checked = form.querySelector("input[name=mood]:checked");
+  submitButton.disabled = true;
+
+  try {
+    const data = await apiRequest(ENDPOINTS.mood, "POST", {
+      mood: checked.value,
+      date: selectedDay.date,
+    });
+    moodSheet.close();
+    if (data.ask_questions) {
+      sessionStorage.setItem("mood_just_saved", "1");
+      window.location.href = "daily-questions.html";
+      return;
+    }
+    showToast("ثبت شد.");
+    loadCalendar();
+  } catch (error) {
+    showToast("ثبت نشد. دوباره امتحان کن.", "error");
+    submitButton.disabled = false;
+  }
+}
+
+page.addEventListener("click", (event) => {
+  const cell = event.target.closest("[data-day]");
+  if (!cell) return;
+
+  selectedDay = calendarData.days.find((day) => day.day === Number(cell.dataset.day));
+  const title = `حال ${getDayTitle(selectedDay, calendarData.month_name)}`;
+  openMoodSheet(moodSheet, title, calendarData.moods, selectedDay.mood);
+});
+
+listenToMoodForms(saveDayMood);
 loadCalendar();

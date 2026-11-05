@@ -9,6 +9,21 @@ function createMoodChip(mood, currentMood) {
   `;
 }
 
+function listenToMoodForms(onSubmit) {
+  document.addEventListener("change", (event) => {
+    if (event.target.name === "mood") {
+      event.target.form.querySelector("button[type=submit]").disabled = false;
+    }
+  });
+
+  document.addEventListener("submit", (event) => {
+    if (event.target.matches("[data-mood-form]")) {
+      event.preventDefault();
+      onSubmit(event.target);
+    }
+  });
+}
+
 function createMoodPicker(moods, currentMood) {
   const chips = moods.map((mood) => createMoodChip(mood, currentMood)).join("");
 
@@ -16,7 +31,7 @@ function createMoodPicker(moods, currentMood) {
     <form class="mood-picker" data-mood-form>
       <div class="mood-grid">${chips}</div>
       <button type="submit" class="btn btn--primary btn--block" ${currentMood ? "" : "disabled"}>
-        ${currentMood ? "به‌روزرسانی حال امروز" : "ثبت حال امروز"}
+        ${currentMood ? "تغییر حال" : "ثبت حال"}
       </button>
     </form>
   `;

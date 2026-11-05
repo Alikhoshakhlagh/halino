@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
@@ -7,7 +9,15 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import City, OTPCode, User
 from content.models import Category, Item, Occasion, Tag
 from journey.jalali import to_jalali
-from journey.models import Answer, Mood, Question, UserItemStatus, UserTagAffinity
+from journey.models import (
+    Answer,
+    DailyRecommendation,
+    Mood,
+    MoodEntry,
+    Question,
+    UserItemStatus,
+    UserTagAffinity,
+)
 
 
 class ApiTestCase(TestCase):
@@ -118,6 +128,34 @@ class TodayTests(ApiTestCase):
         ids = [row["item"]["id"] for row in rows]
         self.assertNotIn(skipped_id, ids)
         self.assertTrue(next(row for row in rows if row["item"]["id"] == done_id)["is_done"])
+
+    def test_past_day_mood_has_no_questions_and_no_recommendations(self):
+        yesterday = timezone.localdate() - timedelta(days=1)
+        mood = Mood.objects.first()
+        response = self.client.post(
+            "/api/mood/", {"mood": mood.id, "date": yesterday.isoformat()}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data["ask_questions"])
+        self.assertTrue(MoodEntry.objects.filter(user=self.user, date=yesterday, mood=mood).exists())
+        self.assertFalse(DailyRecommendation.objects.filter(user=self.user, date=yesterday).exists())
+        self.assertIsNone(self.client.get("/api/today/").data["mood"])
+
+    def test_past_day_mood_can_be_changed(self):
+        yesterday = (timezone.localdate() - timedelta(days=1)).isoformat()
+        first, second = Mood.objects.all()[:2]
+        self.client.post("/api/mood/", {"mood": first.id, "date": yesterday}, format="json")
+        self.client.post("/api/mood/", {"mood": second.id, "date": yesterday}, format="json")
+        entry = MoodEntry.objects.get(user=self.user, date=yesterday)
+        self.assertEqual(entry.mood, second)
+
+    def test_future_or_invalid_mood_date_is_rejected(self):
+        tomorrow = (timezone.localdate() + timedelta(days=1)).isoformat()
+        mood = Mood.objects.first()
+        for date in (tomorrow, "abc"):
+            response = self.client.post("/api/mood/", {"mood": mood.id, "date": date}, format="json")
+            self.assertEqual(response.status_code, 400)
+        self.assertFalse(MoodEntry.objects.filter(user=self.user).exists())
 
     def test_invalid_mood_is_not_found(self):
         self.assertEqual(self.client.post("/api/mood/", {"mood": "abc"}, format="json").status_code, 404)
@@ -262,6 +300,12 @@ class CalendarTests(ApiTestCase):
         today_cells = [day for day in response.data["days"] if day["is_today"]]
         self.assertEqual(today_cells[0]["mood"]["id"], Mood.objects.first().id)
 
+    def test_calendar_has_dates_and_moods_for_the_picker(self):
+        data = self.client.get("/api/calendar/").data
+        self.assertEqual(len(data["moods"]), Mood.objects.count())
+        today_cell = next(day for day in data["days"] if day["is_today"])
+        self.assertEqual(today_cell["date"], timezone.localdate().isoformat())
+
     def test_month_navigation_wraps_year(self):
         response = self.client.get("/api/calendar/?y=1405&m=1")
         self.assertEqual(response.data["previous"], {"y": 1404, "m": 12})
@@ -321,6 +365,25 @@ class CatalogTests(ApiTestCase):
 
         response = self.client.post(f"/api/items/{item.id}/action/", {"action": "x"}, format="json")
         self.assertEqual(response.status_code, 400)
+
+
+class DemoUserTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_base", verbosity=0)
+
+    def test_demo_user_has_activity_and_can_be_rebuilt(self):
+        call_command("demo_user", verbosity=0)
+        call_command("demo_user", verbosity=0)
+
+        user = User.objects.get(phone="09121234567")
+        self.assertTrue(user.onboarding_done)
+        self.assertGreater(MoodEntry.objects.filter(user=user).count(), 60)
+        self.assertFalse(MoodEntry.objects.filter(user=user, date=timezone.localdate()).exists())
+        self.assertTrue(Answer.objects.filter(user=user, date__isnull=False).exists())
+        self.assertTrue(UserTagAffinity.objects.filter(user=user).exists())
+        for status in (UserItemStatus.DONE, UserItemStatus.SKIPPED, UserItemStatus.IN_PROGRESS):
+            self.assertTrue(UserItemStatus.objects.filter(user=user, status=status).exists())
 
 
 class ProfileTests(ApiTestCase):

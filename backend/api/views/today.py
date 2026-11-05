@@ -1,3 +1,5 @@
+from datetime import date as date_cls
+
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.decorators import api_view
@@ -113,6 +115,16 @@ def today_view(request):
     )
 
 
+def get_mood_date(raw_date, today):
+    if not raw_date:
+        return today
+    try:
+        date = date_cls.fromisoformat(str(raw_date))
+    except ValueError:
+        return None
+    return date if date <= today else None
+
+
 @api_view(["POST"])
 def set_mood_view(request):
     mood_id = str(request.data.get("mood", ""))
@@ -121,11 +133,18 @@ def set_mood_view(request):
         return Response({"detail": "این حال پیدا نشد."}, status=404)
 
     today = timezone.localdate()
+    date = get_mood_date(request.data.get("date"), today)
+    if date is None:
+        return Response({"detail": "برای این تاریخ نمی‌شه حال ثبت کرد."}, status=400)
+
     entry, _ = MoodEntry.objects.update_or_create(
         user=request.user,
-        date=today,
+        date=date,
         defaults={"mood": mood, "note": str(request.data.get("note", ""))[:200]},
     )
+    if date != today:
+        return Response({"mood": MoodSerializer(mood).data, "ask_questions": False})
+
     engine.build_mood_layer(request.user, entry)
 
     ask_questions = bool(get_questions(Question.DAILY)) and not has_answered_daily(
