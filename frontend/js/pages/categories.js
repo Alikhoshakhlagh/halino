@@ -28,6 +28,7 @@ async function loadCategories() {
       <section class="tiles">${data.categories.map(createTile).join("")}</section>
       ${cityNote}
     `;
+    restoreScroll();
   } catch (error) {
     showPageError(page, loadCategories);
   }

@@ -2,6 +2,18 @@ requireLogin();
 
 const page = document.getElementById("questions-page");
 let questions = [];
+let todayDate = "";
+
+function saveQuestionsDraft() {
+  saveState("daily_draft", { date: todayDate, answers: collectAnswers() });
+}
+
+function applyQuestionsDraft() {
+  const draft = loadState("daily_draft");
+  if (!draft || draft.date !== todayDate) return;
+
+  questions.forEach((question) => applyAnswerDraft(question, draft.answers[question.id]));
+}
 
 function createQuestion(question) {
   return `
@@ -23,6 +35,8 @@ function createBox(box) {
 
 function renderQuestions(data) {
   questions = data.boxes.flatMap((box) => box.questions);
+  todayDate = data.today_iso;
+  applyQuestionsDraft();
 
   page.innerHTML = `
     <header>
@@ -53,6 +67,7 @@ async function loadQuestions() {
   try {
     const data = await apiRequest(ENDPOINTS.dailyQuestions);
     renderQuestions(data);
+    restoreScroll();
     if (sessionStorage.getItem("mood_just_saved")) {
       sessionStorage.removeItem("mood_just_saved");
       showToast("حال امروزت ثبت شد.");
@@ -70,7 +85,10 @@ page.addEventListener("change", (event) => {
   if (event.target.type === "radio" || event.target.type === "checkbox") {
     syncOtherInput(event.target.closest("[data-question]"));
   }
+  saveQuestionsDraft();
 });
+
+page.addEventListener("input", saveQuestionsDraft);
 
 page.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -79,6 +97,7 @@ page.addEventListener("submit", async (event) => {
 
   try {
     await apiRequest(ENDPOINTS.dailyQuestions, "POST", { answers: collectAnswers() });
+    removeState("daily_draft");
     window.location.href = "index.html";
   } catch (error) {
     showToast("ثبت نشد. دوباره امتحان کن.", "error");

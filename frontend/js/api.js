@@ -11,6 +11,7 @@ function requireLogin() {
 function logout() {
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
+  clearAllState();
   window.location.href = "login.html";
 }
 

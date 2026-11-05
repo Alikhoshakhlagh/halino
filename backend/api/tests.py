@@ -192,6 +192,7 @@ class TodayTests(ApiTestCase):
         self.client.post("/api/mood/", {"mood": Mood.objects.first().id}, format="json")
         data = self.client.get("/api/daily-questions/").data
         self.assertEqual([box["title"] for box in data["boxes"]], ["حال امروزت", "شرایط امروزت"])
+        self.assertEqual(data["today_iso"], timezone.localdate().isoformat())
         self.assertEqual(sum(len(box["questions"]) for box in data["boxes"]), 5)
 
     def test_mood_after_answering_does_not_ask_again(self):

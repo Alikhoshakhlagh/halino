@@ -3,6 +3,7 @@ renderTabbar("categories");
 
 const page = document.getElementById("item-page");
 const itemId = new URLSearchParams(window.location.search).get("id");
+const ratingKey = `rating_${itemId}`;
 
 const LINK_LABELS = {
   film: "دیدن صفحه‌ی فیلم",
@@ -80,7 +81,7 @@ function createActions(item) {
     <section class="panel">
       <div class="field">
         <label class="label" for="rating">اگه انجامش دادی، چند می‌دی؟</label>
-        <select class="input" id="rating">${createRatingOptions(item.rating)}</select>
+        <select class="input" id="rating">${createRatingOptions(loadState(ratingKey, item.rating))}</select>
       </div>
       <button type="button" class="btn btn--ghost btn--block" data-item-action="done">
         ${createIcon("check", "icon--small")} انجام دادم
@@ -132,6 +133,7 @@ async function loadItem() {
   try {
     const item = await apiRequest(`${ENDPOINTS.items}${encodeURIComponent(itemId)}/`);
     renderItem(item);
+    restoreScroll();
   } catch (error) {
     if (error.status === 404) {
       showNotFound();
@@ -140,6 +142,12 @@ async function loadItem() {
     }
   }
 }
+
+page.addEventListener("change", (event) => {
+  if (event.target.id === "rating") {
+    saveState(ratingKey, Number(event.target.value));
+  }
+});
 
 page.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-item-action]");
@@ -150,6 +158,7 @@ page.addEventListener("click", async (event) => {
 
   try {
     const data = await sendItemAction(itemId, button.dataset.itemAction, rating);
+    removeState(ratingKey);
     showToast(data.detail);
     loadItem();
   } catch (error) {

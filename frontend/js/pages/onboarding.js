@@ -93,6 +93,22 @@ function showStep(index) {
   updateButtons();
   steps[index].focus();
   window.scrollTo(0, 0);
+  saveOnboardingDraft();
+}
+
+function saveOnboardingDraft() {
+  saveState("onboarding_draft", {
+    step: currentStep,
+    name: document.getElementById("display-name").value,
+    city: Number(document.getElementById("city").value),
+    answers: collectAnswers(),
+  });
+}
+
+function applyOnboardingDraft(data, draft) {
+  data.display_name = draft.name;
+  data.city = draft.city;
+  data.questions.forEach((question) => applyAnswerDraft(question, draft.answers[question.id]));
 }
 
 function collectAnswers() {
@@ -107,13 +123,18 @@ async function loadOnboarding() {
   try {
     const data = await apiRequest(ENDPOINTS.onboarding);
     if (data.done) {
+      removeState("onboarding_draft");
       window.location.href = "index.html";
       return;
+    }
+    const draft = loadState("onboarding_draft");
+    if (draft) {
+      applyOnboardingDraft(data, draft);
     }
     questions = data.questions;
     stepsBox.innerHTML = createNameStep(data) + questions.map(createQuestionStep).join("");
     form.hidden = false;
-    showStep(0);
+    showStep(draft ? Math.min(draft.step, getSteps().length - 1) : 0);
   } catch (error) {
     showPageError(stepsBox, loadOnboarding);
   }
@@ -127,12 +148,16 @@ nextButton.addEventListener("click", () => {
   }
 });
 
-stepsBox.addEventListener("input", updateButtons);
+stepsBox.addEventListener("input", () => {
+  updateButtons();
+  saveOnboardingDraft();
+});
 
 stepsBox.addEventListener("change", (event) => {
   const step = getSteps()[currentStep];
   syncOtherInput(step);
   updateButtons();
+  saveOnboardingDraft();
 
   const isSingleChoice = event.target.type === "radio" && !event.target.hasAttribute("data-other");
   const isLast = currentStep === getSteps().length - 1;
@@ -156,6 +181,7 @@ form.addEventListener("submit", async (event) => {
       city: document.getElementById("city").value,
       answers: collectAnswers(),
     });
+    removeState("onboarding_draft");
     window.location.href = "index.html";
   } catch (error) {
     if (error.data && error.data.missing_question) {

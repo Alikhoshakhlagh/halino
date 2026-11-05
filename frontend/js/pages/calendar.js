@@ -170,6 +170,7 @@ async function loadCalendar() {
       createStats(data),
     ].join("");
     animateCount(document.getElementById("stat-count"), data.count);
+    restoreScroll();
   } catch (error) {
     showPageError(page, loadCalendar);
   }

@@ -4,9 +4,16 @@ renderTabbar("categories");
 const page = document.getElementById("category-page");
 const slug = new URLSearchParams(window.location.search).get("slug");
 
+const stateKey = `category_${slug}`;
+const savedState = loadState(stateKey, { city: "", search: "" });
+
 let categoryData = null;
-let selectedCity = "";
-let searchText = "";
+let selectedCity = savedState.city;
+let searchText = savedState.search;
+
+function saveCategoryState() {
+  saveState(stateKey, { city: selectedCity, search: searchText });
+}
 
 function normalizeText(text) {
   return text
@@ -62,7 +69,7 @@ function createCityFilter(cities) {
 
 function renderPage() {
   const cities = getCities();
-  if (!selectedCity && cities.length > 0) {
+  if (!cities.includes(selectedCity) && cities.length > 0) {
     selectedCity = cities.includes(categoryData.user_city) ? categoryData.user_city : cities[0];
   }
 
@@ -101,6 +108,7 @@ async function loadCategory() {
 
     if (isFirstLoad) {
       renderPage();
+      restoreScroll();
     } else {
       renderList();
     }
@@ -116,6 +124,7 @@ async function loadCategory() {
 page.addEventListener("input", (event) => {
   if (event.target.id === "search") {
     searchText = event.target.value;
+    saveCategoryState();
     renderList();
   }
 });
@@ -123,6 +132,7 @@ page.addEventListener("input", (event) => {
 page.addEventListener("change", (event) => {
   if (event.target.name === "city") {
     selectedCity = event.target.value;
+    saveCategoryState();
     renderList();
   }
 });

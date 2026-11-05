@@ -30,6 +30,13 @@ function createChoiceList(question, extraClass = "") {
   `;
 }
 
+function applyAnswerDraft(question, answer) {
+  if (!answer) return;
+
+  question.selected = answer.options;
+  question.other_text = answer.other;
+}
+
 function readQuestionAnswer(container, question) {
   const checked = container.querySelectorAll(`input[name="q${question.id}"]:checked`);
   const answer = { options: [], other: "" };

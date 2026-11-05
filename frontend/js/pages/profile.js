@@ -4,6 +4,17 @@ renderTabbar("profile");
 const page = document.getElementById("profile-page");
 let questions = [];
 
+const profileDraft = loadState("profile_draft", { questions: {}, name: null, city: null });
+
+function saveProfileDraft() {
+  saveState("profile_draft", profileDraft);
+}
+
+function isFoldOpen(foldName, isOpenByDefault) {
+  const openFolds = loadState("profile_open");
+  return openFolds ? openFolds.includes(foldName) : isOpenByDefault;
+}
+
 function createHeader(data) {
   const initial = data.display_name ? data.display_name[0] : "ح";
   return `
@@ -25,7 +36,7 @@ function createQuestionCard(question, isOpen) {
   const tick = isAnswered ? createIcon("check", "icon--small fold__tick") : "";
 
   return `
-    <details class="fold" ${isOpen ? "open" : ""}>
+    <details class="fold" data-fold="q${question.id}" ${isFoldOpen(`q${question.id}`, isOpen) ? "open" : ""}>
       <summary class="fold__summary">
         ${tick}
         <span class="fold__text">
@@ -62,10 +73,11 @@ function createQuestions(data) {
 }
 
 function createCityOptions(data) {
+  const selectedCity = profileDraft.city ?? data.city;
   return data.cities
     .map((city) => {
       const note = city.is_supported ? "" : " (بدون پیشنهاد مکان)";
-      const selected = city.id === data.city ? "selected" : "";
+      const selected = city.id === selectedCity ? "selected" : "";
       return `<option value="${city.id}" ${selected}>${escapeHtml(city.name)}${note}</option>`;
     })
     .join("");
@@ -73,7 +85,7 @@ function createCityOptions(data) {
 
 function createEditForm(data) {
   return `
-    <details class="fold">
+    <details class="fold" data-fold="edit" ${isFoldOpen("edit", false) ? "open" : ""}>
       <summary class="fold__summary">
         ${createIcon("sliders", "icon--small")}
         <span class="fold__text">ویرایش پروفایل</span>
@@ -82,7 +94,7 @@ function createEditForm(data) {
       <form class="fold__body form" id="profile-form">
         <div class="field">
           <label class="label" for="display-name">اسمت</label>
-          <input class="input" id="display-name" maxlength="64" value="${escapeHtml(data.display_name)}">
+          <input class="input" id="display-name" maxlength="64" value="${escapeHtml(profileDraft.name ?? data.display_name)}">
         </div>
         <div class="field">
           <label class="label" for="city">شهرت</label>
@@ -111,7 +123,7 @@ function createSkipped(data) {
   if (data.skipped.length === 0) return "";
 
   return `
-    <details class="fold">
+    <details class="fold" data-fold="skipped" ${isFoldOpen("skipped", false) ? "open" : ""}>
       <summary class="fold__summary">
         ${createIcon("eye-off", "icon--small")}
         <span class="fold__text">مواردی که گفتی پیشنهاد نده</span>
@@ -124,6 +136,7 @@ function createSkipped(data) {
 
 function renderProfile(data) {
   questions = data.questions;
+  questions.forEach((question) => applyAnswerDraft(question, profileDraft.questions[question.id]));
   page.innerHTML = `
     ${createHeader(data)}
     ${createQuestions(data)}
@@ -140,6 +153,7 @@ function renderProfile(data) {
 async function loadProfile() {
   try {
     renderProfile(await apiRequest(ENDPOINTS.profile));
+    restoreScroll();
   } catch (error) {
     showPageError(page, loadProfile);
   }
@@ -154,6 +168,9 @@ async function saveProfile(form) {
       display_name: document.getElementById("display-name").value,
       city: document.getElementById("city").value,
     });
+    profileDraft.name = null;
+    profileDraft.city = null;
+    saveProfileDraft();
     showToast(data.detail);
     loadProfile();
   } catch (error) {
@@ -174,6 +191,9 @@ async function saveQuestion(form) {
       "POST",
       readQuestionAnswer(form, question)
     );
+    delete profileDraft.questions[questionId];
+    saveProfileDraft();
+    removeState("profile_open");
     showToast(data.detail);
     loadProfile();
   } catch (error) {
@@ -192,12 +212,38 @@ page.addEventListener("submit", (event) => {
   }
 });
 
+function updateProfileDraft(event) {
+  const questionForm = event.target.closest("[data-question-form]");
+  if (questionForm) {
+    const questionId = Number(questionForm.dataset.questionForm);
+    const question = questions.find((row) => row.id === questionId);
+    profileDraft.questions[questionId] = readQuestionAnswer(questionForm, question);
+  } else if (event.target.id === "display-name") {
+    profileDraft.name = event.target.value;
+  } else if (event.target.id === "city") {
+    profileDraft.city = Number(event.target.value);
+  }
+  saveProfileDraft();
+}
+
 page.addEventListener("change", (event) => {
   const form = event.target.closest("[data-question-form]");
   if (form && event.target.name) {
     syncOtherInput(form);
   }
+  updateProfileDraft(event);
 });
+
+page.addEventListener("input", updateProfileDraft);
+
+page.addEventListener(
+  "toggle",
+  () => {
+    const openFolds = [...page.querySelectorAll("details[open]")].map((fold) => fold.dataset.fold);
+    saveState("profile_open", openFolds);
+  },
+  true
+);
 
 page.addEventListener("click", (event) => {
   if (event.target.closest("#logout-btn")) {

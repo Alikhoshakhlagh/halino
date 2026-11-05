@@ -140,6 +140,7 @@ async function loadToday() {
       return;
     }
     renderToday(data);
+    restoreScroll();
   } catch (error) {
     showPageError(page, loadToday);
   }

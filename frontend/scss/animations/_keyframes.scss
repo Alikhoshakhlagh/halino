@@ -42,6 +42,12 @@
   }
 }
 
+.is-reload .page > *,
+.is-reload .item-row,
+.is-reload .tile {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

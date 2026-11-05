@@ -34,8 +34,7 @@ python manage.py runserver
 python manage.py test
 ```
 
-فرانت: `frontend/index.html` را با Live Server باز کن یا داخل `frontend` بزن
-`python -m http.server 5500`. برای تغییر استایل:
+فرانت: داخل `frontend` بزن `python serve.py`. برای تغییر استایل:
 `sass --watch scss/main.scss css/main.css --no-source-map`.
 
 - ورود: شماره موبایل → کد OTP در **کنسول چاپ می‌شود و روی صفحه‌ی تأیید هم نمایش داده می‌شود** (`HALINO_OTP_CONSOLE = True`). سرویس پیامک وصل نیست.

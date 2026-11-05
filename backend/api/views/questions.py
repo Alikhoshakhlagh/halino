@@ -69,6 +69,7 @@ def daily_questions_view(request):
         return Response(
             {
                 "mood": MoodSerializer(entry.mood).data,
+                "today_iso": today.isoformat(),
                 "boxes": [
                     {
                         "title": box["title"],
