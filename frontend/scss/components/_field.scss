@@ -1,0 +1,50 @@
+@use "../mixins" as *;
+
+.form {
+  @include stack(var(--space-5));
+}
+
+.field {
+  @include stack(var(--space-2));
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.input {
+  @include focus-ring;
+  width: 100%;
+  min-height: 3rem;
+  font-size: 1rem;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+
+.input--code {
+  direction: ltr;
+  text-align: center;
+  font-size: var(--text-xl);
+  letter-spacing: 0.4em;
+}
+
+.input--invalid {
+  border-color: var(--color-danger);
+}
+
+.form-actions {
+  @include stack(var(--space-3));
+  align-items: center;
+}
+
+.field-error {
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+
+  &:empty {
+    display: none;
+  }
+}

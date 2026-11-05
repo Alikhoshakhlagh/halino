@@ -1,8 +1,0 @@
-{# یک چهره. پارامترها: mood (اجباری) · cls (کلاس اندازه/حالت، اختیاری) #}
-<span class="face {{ cls }}" style="--c: {{ mood.color }}" title="{{ mood.name }}">
-  <svg viewBox="0 0 100 100" role="img" aria-label="{{ mood.name }}">
-    <circle class="face__disc" cx="50" cy="50" r="50"/>
-    <use class="face__ink" href="#face-{{ mood.face }}"/>
-    <ellipse class="face__gloss" cx="33" cy="26" rx="17" ry="11"/>
-  </svg>
-</span>

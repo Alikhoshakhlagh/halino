@@ -1,0 +1,28 @@
+@use "../mixins" as *;
+
+.tiles {
+  @include grid(2, var(--space-3));
+}
+
+.tile {
+  @include card(var(--color-surface), var(--space-4));
+  @include stack(var(--space-1));
+  @include pressable;
+  @include enter-list(10);
+  box-shadow: var(--shadow-card);
+}
+
+.tile__icon {
+  @include square(3rem, var(--radius-md));
+  margin-bottom: var(--space-2);
+  background: var(--c);
+}
+
+.tile__name {
+  font-weight: var(--weight-medium);
+}
+
+.tile__count {
+  @include text-note;
+  font-size: var(--text-xs);
+}

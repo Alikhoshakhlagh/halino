@@ -1,0 +1,34 @@
+@use "../mixins" as *;
+
+$face-sizes: (
+  "small": 2rem,
+  "medium": 3rem,
+  "large": 4.5rem,
+);
+
+.face {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+@each $name, $size in $face-sizes {
+  .face--#{$name} {
+    width: $size;
+    flex: none;
+  }
+}
+
+.face__disc {
+  fill: var(--c);
+}
+
+.face__ink {
+  fill: var(--color-ink);
+  stroke: var(--color-ink);
+
+  circle,
+  ellipse {
+    stroke: none;
+  }
+}

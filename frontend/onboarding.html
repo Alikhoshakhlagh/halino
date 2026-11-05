@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fbf9f5">
+  <title>شروع | حالینو</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+  <main class="page page--no-tabbar">
+    <form class="steps" id="onboarding-form" novalidate hidden>
+      <div class="steps__top">
+        <progress class="steps__bar" id="steps-bar" value="1" max="1" aria-label="پیشرفت"></progress>
+        <p class="note" id="steps-counter"></p>
+      </div>
+      <div id="steps-box"></div>
+      <div class="steps__nav">
+        <button type="button" class="btn btn--ghost" id="previous-btn" hidden>قبلی</button>
+        <button type="button" class="btn btn--primary" id="next-btn">بعدی</button>
+        <button type="submit" class="btn btn--primary" id="submit-btn" hidden>بزن بریم</button>
+      </div>
+    </form>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/components/choice.js"></script>
+  <script src="js/pages/onboarding.js"></script>
+</body>
+</html>

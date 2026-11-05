@@ -1,0 +1,458 @@
+from datetime import timedelta
+
+from django.core.management import call_command
+from django.test import TestCase
+from django.utils import timezone
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from accounts.models import City, OTPCode, User
+from content.models import Category, Item, Occasion, Tag
+from journey.jalali import to_jalali
+from journey.models import (
+    Answer,
+    DailyRecommendation,
+    Mood,
+    MoodEntry,
+    Question,
+    UserItemStatus,
+    UserTagAffinity,
+)
+
+
+class ApiTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_base", verbosity=0)
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            phone="09120000000",
+            display_name="سارا",
+            city=City.objects.get(slug="tehran"),
+            onboarding_done=True,
+        )
+        self.client.force_authenticate(self.user)
+
+
+class AuthTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_login_then_verify_returns_tokens(self):
+        response = self.client.post("/api/auth/login/", {"phone": "۰۹۱۲۱۱۱۲۲۳۳"}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["phone"], "09121112233")
+
+        code = OTPCode.objects.get(phone="09121112233", is_used=False).code
+        self.assertEqual(response.data["dev_code"], code)
+
+        response = self.client.post(
+            "/api/auth/verify/", {"phone": "09121112233", "code": code}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
+        self.assertFalse(response.data["onboarding_done"])
+        self.assertTrue(User.objects.filter(phone="09121112233").exists())
+
+    def test_invalid_phone(self):
+        response = self.client.post("/api/auth/login/", {"phone": "123"}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("phone", response.data)
+
+    def test_wrong_code_is_counted(self):
+        self.client.post("/api/auth/login/", {"phone": "09121112244"}, format="json")
+        otp = OTPCode.objects.get(phone="09121112244", is_used=False)
+        wrong_code = "000000" if otp.code != "000000" else "111111"
+
+        response = self.client.post(
+            "/api/auth/verify/", {"phone": "09121112244", "code": wrong_code}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+        otp.refresh_from_db()
+        self.assertEqual(otp.attempts, 1)
+
+    def test_expired_code(self):
+        response = self.client.post(
+            "/api/auth/verify/", {"phone": "09129999999", "code": "123456"}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(response.data["expired"])
+
+    def test_refresh_token_of_deleted_user_is_rejected(self):
+        user = User.objects.create_user(phone="09120000005")
+        refresh = str(RefreshToken.for_user(user))
+        user.delete()
+        response = self.client.post("/api/auth/token/refresh/", {"refresh": refresh}, format="json")
+        self.assertEqual(response.status_code, 401)
+
+    def test_pages_need_login(self):
+        self.assertEqual(self.client.get("/api/today/").status_code, 401)
+
+
+class TodayTests(ApiTestCase):
+    def test_new_user_must_do_onboarding(self):
+        self.user.onboarding_done = False
+        self.user.save()
+        response = self.client.get("/api/today/")
+        self.assertTrue(response.data["onboarding_required"])
+
+    def test_today_without_mood(self):
+        response = self.client.get("/api/today/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data["mood"])
+        self.assertEqual(response.data["mood_items"], [])
+        self.assertEqual(len(response.data["moods"]), Mood.objects.count())
+        self.assertTrue(response.data["day_items"])
+
+    def test_set_mood_builds_mood_items(self):
+        mood = Mood.objects.first()
+        response = self.client.post("/api/mood/", {"mood": mood.id}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["ask_questions"])
+
+        response = self.client.get("/api/today/")
+        self.assertEqual(response.data["mood"]["id"], mood.id)
+        self.assertTrue(response.data["mood_items"])
+
+    def test_done_item_is_marked_and_skipped_item_is_hidden(self):
+        rows = self.client.get("/api/today/").data["day_items"]
+        done_id = rows[0]["item"]["id"]
+        skipped_id = rows[1]["item"]["id"]
+        self.client.post(f"/api/items/{done_id}/action/", {"action": "done"}, format="json")
+        self.client.post(f"/api/items/{skipped_id}/action/", {"action": "skip"}, format="json")
+
+        rows = self.client.get("/api/today/").data["day_items"]
+        ids = [row["item"]["id"] for row in rows]
+        self.assertNotIn(skipped_id, ids)
+        self.assertTrue(next(row for row in rows if row["item"]["id"] == done_id)["is_done"])
+
+    def test_past_day_mood_has_no_questions_and_no_recommendations(self):
+        yesterday = timezone.localdate() - timedelta(days=1)
+        mood = Mood.objects.first()
+        response = self.client.post(
+            "/api/mood/", {"mood": mood.id, "date": yesterday.isoformat()}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data["ask_questions"])
+        self.assertTrue(MoodEntry.objects.filter(user=self.user, date=yesterday, mood=mood).exists())
+        self.assertFalse(DailyRecommendation.objects.filter(user=self.user, date=yesterday).exists())
+        self.assertIsNone(self.client.get("/api/today/").data["mood"])
+
+    def test_past_day_mood_can_be_changed(self):
+        yesterday = (timezone.localdate() - timedelta(days=1)).isoformat()
+        first, second = Mood.objects.all()[:2]
+        self.client.post("/api/mood/", {"mood": first.id, "date": yesterday}, format="json")
+        self.client.post("/api/mood/", {"mood": second.id, "date": yesterday}, format="json")
+        entry = MoodEntry.objects.get(user=self.user, date=yesterday)
+        self.assertEqual(entry.mood, second)
+
+    def test_future_or_invalid_mood_date_is_rejected(self):
+        tomorrow = (timezone.localdate() + timedelta(days=1)).isoformat()
+        mood = Mood.objects.first()
+        for date in (tomorrow, "abc"):
+            response = self.client.post("/api/mood/", {"mood": mood.id, "date": date}, format="json")
+            self.assertEqual(response.status_code, 400)
+        self.assertFalse(MoodEntry.objects.filter(user=self.user).exists())
+
+    def test_invalid_mood_is_not_found(self):
+        self.assertEqual(self.client.post("/api/mood/", {"mood": "abc"}, format="json").status_code, 404)
+        self.assertEqual(self.client.post("/api/mood/", {}, format="json").status_code, 404)
+
+    def test_invalid_answers_are_ignored(self):
+        self.client.post("/api/mood/", {"mood": Mood.objects.first().id}, format="json")
+        for answers in ([1], "x", {"1": "x"}, {"1": {"options": 5}}):
+            response = self.client.post("/api/daily-questions/", {"answers": answers}, format="json")
+            self.assertEqual(response.status_code, 200)
+
+    def create_today_occasion(self):
+        _, month, day = to_jalali(timezone.localdate())
+        occasion = Occasion.objects.create(
+            source=Occasion.IRAN,
+            calendar=Occasion.JALALI,
+            month=month,
+            day=day,
+            title="روز تست",
+            quote="یک نقل‌قول",
+            priority=99,
+        )
+        occasion.tags.add(Tag.objects.get(slug="calm"))
+        return occasion
+
+    def test_today_shows_occasion_and_why(self):
+        self.create_today_occasion()
+        data = self.client.get("/api/today/").data
+        self.assertEqual(data["occasion"]["title"], "روز تست")
+        self.assertEqual(data["occasion"]["source_label"], "تقویم ایرانی")
+        self.assertIn("روز تست", [row["because"] for row in data["day_items"]])
+
+    def test_daily_questions_have_two_boxes(self):
+        self.client.post("/api/mood/", {"mood": Mood.objects.first().id}, format="json")
+        data = self.client.get("/api/daily-questions/").data
+        self.assertEqual([box["title"] for box in data["boxes"]], ["حال امروزت", "شرایط امروزت"])
+        self.assertEqual(data["today_iso"], timezone.localdate().isoformat())
+        self.assertEqual(sum(len(box["questions"]) for box in data["boxes"]), 5)
+
+    def test_mood_after_answering_does_not_ask_again(self):
+        mood = Mood.objects.first()
+        self.client.post("/api/mood/", {"mood": mood.id}, format="json")
+        boxes = self.client.get("/api/daily-questions/").data["boxes"]
+        questions = [question for box in boxes for question in box["questions"]]
+        answers = {str(q["id"]): {"options": [q["options"][0]["id"]]} for q in questions}
+        self.client.post("/api/daily-questions/", {"answers": answers}, format="json")
+        self.assertEqual(Answer.objects.filter(user=self.user, date__isnull=False).count(), 5)
+
+        response = self.client.post("/api/mood/", {"mood": mood.id}, format="json")
+        self.assertFalse(response.data["ask_questions"])
+
+    def test_daily_questions_need_mood(self):
+        self.assertEqual(self.client.get("/api/daily-questions/").status_code, 404)
+
+    def test_daily_questions_are_saved(self):
+        self.client.post("/api/mood/", {"mood": Mood.objects.first().id}, format="json")
+        data = self.client.get("/api/daily-questions/").data
+        question = data["boxes"][0]["questions"][0]
+        option = question["options"][0]
+
+        response = self.client.post(
+            "/api/daily-questions/",
+            {"answers": {str(question["id"]): {"options": [option["id"]]}}},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            Answer.objects.filter(user=self.user, option_id=option["id"]).exists()
+        )
+        self.assertTrue(self.client.get("/api/today/").data["answered_daily"])
+
+
+class OnboardingTests(ApiTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user.onboarding_done = False
+        self.user.save()
+
+    def full_answers(self):
+        answers = {}
+        for question in Question.objects.filter(scope=Question.ONBOARDING, is_active=True):
+            answers[str(question.id)] = {"options": [question.options.first().id]}
+        return answers
+
+    def test_incomplete_answers_do_not_finish(self):
+        response = self.client.post("/api/onboarding/", {"answers": {}}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("missing_question", response.data)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.onboarding_done)
+
+    def test_complete_answers_finish_and_save_name(self):
+        response = self.client.post(
+            "/api/onboarding/",
+            {"display_name": "علی", "city": "", "answers": self.full_answers()},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.onboarding_done)
+        self.assertEqual(self.user.display_name, "علی")
+        self.assertIsNone(self.user.city)
+
+    def test_other_answer_is_saved_as_free_text(self):
+        question = Question.objects.filter(
+            scope=Question.ONBOARDING, is_active=True, allows_other=True
+        ).first()
+        if question is None:
+            self.skipTest("no question with other option")
+        answers = self.full_answers()
+        answers[str(question.id)] = {"options": [], "other": "متن آزاد"}
+        response = self.client.post("/api/onboarding/", {"answers": answers}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            Answer.objects.filter(question=question, option=None, free_text="متن آزاد").exists()
+        )
+
+    def test_other_without_text_does_not_finish(self):
+        question = Question.objects.filter(
+            scope=Question.ONBOARDING, is_active=True, allows_other=True
+        ).first()
+        answers = self.full_answers()
+        answers[str(question.id)] = {"options": [], "other": ""}
+        response = self.client.post("/api/onboarding/", {"answers": answers}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.onboarding_done)
+
+    def test_finished_user_gets_done(self):
+        self.user.onboarding_done = True
+        self.user.save()
+        self.assertTrue(self.client.get("/api/onboarding/").data["done"])
+
+
+class CalendarTests(ApiTestCase):
+    def test_calendar_shows_saved_mood(self):
+        self.client.post("/api/mood/", {"mood": Mood.objects.first().id}, format="json")
+        response = self.client.get("/api/calendar/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["balls"]), 1)
+        self.assertEqual(response.data["dominant"]["id"], Mood.objects.first().id)
+        today_cells = [day for day in response.data["days"] if day["is_today"]]
+        self.assertEqual(today_cells[0]["mood"]["id"], Mood.objects.first().id)
+
+    def test_calendar_has_dates_and_moods_for_the_picker(self):
+        data = self.client.get("/api/calendar/").data
+        self.assertEqual(len(data["moods"]), Mood.objects.count())
+        today_cell = next(day for day in data["days"] if day["is_today"])
+        self.assertEqual(today_cell["date"], timezone.localdate().isoformat())
+
+    def test_month_navigation_wraps_year(self):
+        response = self.client.get("/api/calendar/?y=1405&m=1")
+        self.assertEqual(response.data["previous"], {"y": 1404, "m": 12})
+        response = self.client.get("/api/calendar/?y=1405&m=12")
+        self.assertEqual(response.data["next"], {"y": 1406, "m": 1})
+
+    def test_bad_month_uses_current(self):
+        self.assertEqual(self.client.get("/api/calendar/?m=abc").status_code, 200)
+
+    def test_bad_year_uses_current(self):
+        self.assertEqual(self.client.get("/api/calendar/?y=99999&m=1").status_code, 200)
+
+
+class CatalogTests(ApiTestCase):
+    def test_categories_keep_order(self):
+        slugs = [row["slug"] for row in self.client.get("/api/categories/").data["categories"]]
+        expected = Category.objects.order_by("order", "name").values_list("slug", flat=True)
+        self.assertEqual(slugs, list(expected))
+
+    def test_item_has_at_most_four_tags(self):
+        item = Item.objects.exclude(tags=None).first()
+        self.assertLessEqual(len(self.client.get(f"/api/items/{item.id}/").data["tags"]), 4)
+
+    def test_cafe_category_has_each_city_separately(self):
+        data = self.client.get("/api/categories/cafe/").data
+        cities = {row["city"] for row in data["items"]}
+        self.assertEqual(cities, {"تهران", "اصفهان"})
+        self.assertEqual(data["user_city"], "تهران")
+
+    def test_linked_content_has_real_links(self):
+        for slug in ("book", "podcast", "article", "cafe"):
+            items = Item.objects.filter(category__slug=slug)
+            self.assertTrue(items.exists())
+            self.assertFalse(items.filter(external_url="").exists(), slug)
+
+    def test_city_gate_on_categories(self):
+        slugs = [row["slug"] for row in self.client.get("/api/categories/").data["categories"]]
+        self.assertIn("cafe", slugs)
+
+        self.user.city = None
+        self.user.save()
+        slugs = [row["slug"] for row in self.client.get("/api/categories/").data["categories"]]
+        self.assertNotIn("cafe", slugs)
+        self.assertEqual(self.client.get("/api/categories/cafe/").status_code, 404)
+
+    def test_category_detail_and_item(self):
+        category = Category.objects.filter(needs_city=False, items__isnull=False).first()
+        response = self.client.get(f"/api/categories/{category.slug}/")
+        self.assertEqual(response.status_code, 200)
+        item_id = response.data["items"][0]["id"]
+        response = self.client.get(f"/api/items/{item_id}/")
+        self.assertEqual(response.data["category"]["slug"], category.slug)
+        self.assertIn("tags", response.data)
+
+    def test_item_actions(self):
+        item = Item.objects.filter(category__is_serial=False).first()
+        response = self.client.post(
+            f"/api/items/{item.id}/action/", {"action": "done", "rating": 5}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        row = UserItemStatus.objects.get(user=self.user, item=item)
+        self.assertEqual(row.status, UserItemStatus.DONE)
+        self.assertEqual(row.rating, 5)
+
+        response = self.client.post(
+            f"/api/items/{item.id}/action/", {"action": "progress"}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+        response = self.client.post(f"/api/items/{item.id}/action/", {"action": "x"}, format="json")
+        self.assertEqual(response.status_code, 400)
+
+
+class DemoUserTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_base", verbosity=0)
+
+    def test_demo_user_has_activity_and_can_be_rebuilt(self):
+        call_command("demo_user", verbosity=0)
+        call_command("demo_user", verbosity=0)
+
+        user = User.objects.get(phone="09121234567")
+        self.assertTrue(user.onboarding_done)
+        self.assertGreater(MoodEntry.objects.filter(user=user).count(), 60)
+        self.assertFalse(MoodEntry.objects.filter(user=user, date=timezone.localdate()).exists())
+        self.assertTrue(Answer.objects.filter(user=user, date__isnull=False).exists())
+        self.assertTrue(UserTagAffinity.objects.filter(user=user).exists())
+        for status in (UserItemStatus.DONE, UserItemStatus.SKIPPED, UserItemStatus.IN_PROGRESS):
+            self.assertTrue(UserItemStatus.objects.filter(user=user, status=status).exists())
+
+
+class ProfileTests(ApiTestCase):
+    def test_update_name_and_city(self):
+        city = City.objects.exclude(slug="tehran").first()
+        response = self.client.patch(
+            "/api/profile/", {"display_name": "نیما", "city": city.id}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.display_name, "نیما")
+        self.assertEqual(self.user.city, city)
+
+    def test_invalid_city_is_cleared(self):
+        response = self.client.patch("/api/profile/", {"city": "abc"}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.city)
+
+    def test_profile_question_is_saved_and_shown(self):
+        question = Question.objects.filter(scope=Question.PROFILE, is_active=True).first()
+        option = question.options.first()
+        response = self.client.post(
+            f"/api/profile/questions/{question.id}/", {"options": [option.id]}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = self.client.get("/api/profile/").data
+        row = next(row for row in data["questions"] if row["id"] == question.id)
+        self.assertEqual(row["selected"], [option.id])
+        self.assertEqual(row["answered"], [option.text])
+
+    def test_profile_question_teaches_affinity(self):
+        question = Question.objects.filter(scope=Question.PROFILE, is_active=True).first()
+        option = question.options.exclude(optiontag=None).first()
+        option_tag = option.optiontag_set.first()
+        self.client.post(
+            f"/api/profile/questions/{question.id}/", {"options": [option.id]}, format="json"
+        )
+        affinity = UserTagAffinity.objects.get(user=self.user, tag_id=option_tag.tag_id)
+        self.assertAlmostEqual(affinity.weight, option_tag.weight * 0.5)
+
+    def test_profile_has_only_profile_questions(self):
+        ids = {row["id"] for row in self.client.get("/api/profile/").data["questions"]}
+        expected = Question.objects.filter(scope=Question.PROFILE, is_active=True)
+        self.assertEqual(ids, set(expected.values_list("id", flat=True)))
+
+    def test_empty_profile_question_is_rejected(self):
+        question = Question.objects.filter(scope=Question.PROFILE, is_active=True).first()
+        response = self.client.post(
+            f"/api/profile/questions/{question.id}/", {"options": []}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_skipped_items_are_listed(self):
+        item = Item.objects.first()
+        self.client.post(f"/api/items/{item.id}/action/", {"action": "skip"}, format="json")
+        data = self.client.get("/api/profile/").data
+        self.assertEqual(data["skipped"][0]["id"], item.id)

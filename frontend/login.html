@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fbf9f5">
+  <title>ورود | حالینو</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+  <main class="page page--no-tabbar auth">
+    <section class="auth__intro">
+      <div class="auth__faces" id="auth-faces" aria-hidden="true"></div>
+      <h1 class="auth__title">هر روز، یه چیز به حال خودت.</h1>
+      <p class="auth__lead">حالت رو بگو؛ حالینو فیلم، کتاب، پیاده‌روی یا یه کافه متناسب با همون حال پیدا می‌کنه.</p>
+    </section>
+
+    <section class="auth__box">
+      <form class="form" id="login-form" novalidate>
+        <div class="field">
+          <label class="label" for="phone">شماره موبایل</label>
+          <input class="input" type="tel" inputmode="numeric" id="phone" placeholder="۰۹۱۲۳۴۵۶۷۸۹" autocomplete="tel" aria-describedby="phone-error" autofocus>
+          <p class="field-error" id="phone-error" role="alert"></p>
+        </div>
+        <button class="btn btn--primary btn--block" type="submit">دریافت کد</button>
+      </form>
+      <p class="note">اگه قبلاً ثبت‌نام نکردی، همین‌جا حسابت ساخته می‌شه.</p>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/components/face.js"></script>
+  <script src="js/auth/login.js"></script>
+</body>
+</html>

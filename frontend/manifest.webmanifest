@@ -1,0 +1,14 @@
+{
+  "name": "حالینو",
+  "short_name": "حالینو",
+  "description": "پیشنهاد محتوا و فعالیت بر اساس حال امروزت",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#fbf9f5",
+  "theme_color": "#fbf9f5",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

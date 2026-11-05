@@ -1,0 +1,83 @@
+:root {
+  --color-bg: #fbf9f5;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f4f1ea;
+  --color-line: #ebe6dc;
+  --color-ink: #3a3631;
+  --color-muted: #6f695f;
+  --color-primary: #bfd7a8;
+  --color-primary-hover: #b3cf98;
+  --color-primary-soft: #eaf2e0;
+  --color-primary-strong: #55733e;
+  --color-danger: #a4472e;
+  --color-danger-soft: #f9e6e0;
+  --color-backdrop: rgba(58, 54, 49, 0.32);
+  --color-shadow: rgba(58, 54, 49, 0.07);
+
+  --tint-sage: #e4efd8;
+  --tint-peach: #f9e5d8;
+  --tint-blush: #f6e2e4;
+  --tint-sky: #dfe9f3;
+  --tint-lilac: #e8e4f3;
+  --tint-sand: #efe9dd;
+  --tint-mint: #dcefe7;
+  --tint-coral: #f7ded7;
+
+  --mood-happy: #f6e6ab;
+  --mood-calm: #cfe3bc;
+  --mood-focused: #bfdfe2;
+  --mood-tired: #d9d3ea;
+  --mood-bored: #e5ded1;
+  --mood-longing: #f2d1d5;
+  --mood-anxious: #f7d8b8;
+  --mood-sad: #c8d6e8;
+  --mood-angry: #edbfb0;
+
+  --cat-film: var(--tint-lilac);
+  --cat-series: var(--tint-sky);
+  --cat-book: var(--tint-peach);
+  --cat-podcast: var(--tint-blush);
+  --cat-article: var(--tint-mint);
+  --cat-cafe: var(--tint-sand);
+  --cat-sport: var(--tint-coral);
+  --cat-meditation: var(--tint-sage);
+  --cat-writing: var(--tint-sky);
+  --cat-game: var(--tint-mint);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --radius-full: 999px;
+
+  --shadow-card: 0 1px 2px var(--color-shadow);
+  --shadow-float: 0 8px 24px var(--color-shadow);
+
+  --size-touch: 2.75rem;
+  --size-page: 30rem;
+  --size-tabbar: 3.5rem;
+
+  --duration-fast: 150ms;
+  --duration-base: 240ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}

@@ -1,0 +1,17 @@
+.skeleton {
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-lg);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton--title {
+  height: 4rem;
+}
+
+.skeleton--card {
+  height: 15rem;
+}
+
+.skeleton--row {
+  height: 5rem;
+}
