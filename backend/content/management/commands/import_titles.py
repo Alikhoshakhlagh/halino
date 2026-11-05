@@ -15,6 +15,7 @@ from pathlib import Path
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from content.linked_items import imdb_link
 from content.models import Category, Item, ItemTag, Tag
 from content.taxonomy import GENRE_TAGS, KIND_TAGS, TAGS
 
@@ -81,6 +82,7 @@ class Command(BaseCommand):
                 title=row["t"],
                 defaults={
                     "subtitle": str(row.get("y", "")),
+                    "external_url": imdb_link(row["t"], row.get("y", ""), row.get("imdb", "")),
                     "meta": {"year": row.get("y"), "genres": row.get("g", [])},
                     "is_active": True,
                 },

@@ -329,6 +329,18 @@ class CatalogTests(ApiTestCase):
         item = Item.objects.exclude(tags=None).first()
         self.assertLessEqual(len(self.client.get(f"/api/items/{item.id}/").data["tags"]), 4)
 
+    def test_cafe_category_has_each_city_separately(self):
+        data = self.client.get("/api/categories/cafe/").data
+        cities = {row["city"] for row in data["items"]}
+        self.assertEqual(cities, {"تهران", "اصفهان"})
+        self.assertEqual(data["user_city"], "تهران")
+
+    def test_linked_content_has_real_links(self):
+        for slug in ("book", "podcast", "article", "cafe"):
+            items = Item.objects.filter(category__slug=slug)
+            self.assertTrue(items.exists())
+            self.assertFalse(items.filter(external_url="").exists(), slug)
+
     def test_city_gate_on_categories(self):
         slugs = [row["slug"] for row in self.client.get("/api/categories/").data["categories"]]
         self.assertIn("cafe", slugs)

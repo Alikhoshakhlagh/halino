@@ -11,6 +11,7 @@ from django.db import transaction
 
 from accounts.models import City
 from content.models import Category, Item, ItemTag, Occasion, Tag
+from content.linked_items import build_linked_items, taaghche_search
 from content.national_days import NATIONAL_DAYS
 from content.taxonomy import TAGS
 from journey.models import DAILY_BOX_SPAN, Mood, MoodTag, OptionTag, Question, QuestionOption
@@ -227,36 +228,7 @@ ITEMS = [
     ("book", "هنر ظریف بی‌خیالی", "مارک منسون", "", {"funny": 2, "motivational": 3, "light": 2}, None, None),
     ("book", "اثر مرکب", "دارن هاردی", "", {"motivational": 3, "learning": 2}, None, None),
     ("book", "شدن", "میشل اوباما", "", {"motivational": 3, "history": 2, "emotional": 2}, None, None),
-    ("book", "سپیده‌دم یک زن", "کالین مک‌کالو", "", {"romantic": 3, "emotional": 3}, None, None),
     ("book", "زندگی در پیش رو", "رومن گاری", "", {"emotional": 3, "hopeful": 2, "short": 2}, None, None),
-
-    # --- پادکست ---
-    ("podcast", "چنل‌بی", "روایت و داستان", "", {"light": 3, "escape": 2, "short": 2}, None, 40),
-    ("podcast", "رادیو مرز", "علمی و تحلیلی", "", {"learning": 3, "science": 3}, None, 45),
-    ("podcast", "بی‌پلاس", "خلاصه کتاب", "", {"learning": 3, "short": 2, "motivational": 2}, None, 30),
-    ("podcast", "دگرگون", "روان‌شناسی", "", {"reflective": 3, "mindful": 2, "learning": 2}, None, 35),
-    ("podcast", "رادیو کارنکن", "کار و کسب‌وکار", "", {"learning": 3, "motivational": 2, "focus": 2}, None, 40),
-    ("podcast", "پادکست تاریخ", "روایت تاریخی", "", {"history": 3, "learning": 2, "long": 2}, None, 60),
-
-    # --- مقاله ---
-    ("article", "چرا خواب کافی مهم‌ترین کار امروز توست", "", "", {"learning": 2, "short": 3, "mindful": 2}, None, 8),
-    ("article", "تکنیک پومودورو در ۵ دقیقه", "", "", {"focus": 3, "short": 3, "learning": 2}, None, 5),
-    ("article", "چطور از فرسودگی ذهنی بیرون بیاییم", "", "", {"mindful": 3, "calm": 2, "short": 2}, None, 10),
-    ("article", "قانون دو دقیقه برای شروع کارها", "", "", {"motivational": 3, "short": 3}, None, 6),
-
-    # --- کافه و مکان (وابسته به شهر) ---
-    ("cafe", "کافه‌ای دنج در ولیعصر", "تهران", "", {"social": 3, "comfort": 2, "outdoor": 1}, "tehran", 90),
-    ("cafe", "پارک آب و آتش", "تهران", "", {"outdoor": 3, "social": 2, "body": 2}, "tehran", 120),
-    ("cafe", "کتاب‌فروشی و کافه در انقلاب", "تهران", "", {"solo": 2, "thoughtful": 2, "comfort": 2}, "tehran", 90),
-    ("cafe", "بام تهران", "تهران", "", {"outdoor": 3, "body": 3, "adventure": 2}, "tehran", 180),
-    ("cafe", "قدم زدن روی سی‌وسه پل", "اصفهان", "", {"outdoor": 3, "nostalgic": 2, "calm": 2}, "isfahan", 90),
-    ("cafe", "کافه‌ای در نقش جهان", "اصفهان", "", {"social": 3, "art": 2, "comfort": 2}, "isfahan", 90),
-    ("cafe", "پیاده‌روی در چهارباغ", "اصفهان", "", {"outdoor": 3, "body": 2, "social": 1}, "isfahan", 60),
-    ("cafe", "رستوران سنتی در بازار تهران", "تهران", "ناهار یا شام با حال‌وهوای قدیمی.", {"social": 3, "nostalgic": 2, "comfort": 2}, "tehran", 120),
-    ("cafe", "شام با دوستا در جردن", "تهران", "", {"social": 3, "energizing": 2, "funny": 1}, "tehran", 150),
-    ("cafe", "کافه‌ی بام‌دار در دربند", "تهران", "چای و منظره، بعدش یه پیاده‌روی کوتاه.", {"outdoor": 3, "social": 2, "calm": 2}, "tehran", 120),
-    ("cafe", "رستوران کنار زاینده‌رود", "اصفهان", "", {"social": 3, "calm": 2, "outdoor": 2}, "isfahan", 120),
-    ("cafe", "عصرانه در جلفا", "اصفهان", "کافه‌های محله‌ی ارامنه.", {"social": 3, "art": 2, "comfort": 2}, "isfahan", 90),
 
     # --- ورزش ---
     ("sport", "پیاده‌روی ۲۰ دقیقه‌ای", "", "بدون هدف، فقط راه رفتن.", {"body": 3, "outdoor": 3, "short": 3, "calm": 2}, None, 20),
@@ -283,11 +255,38 @@ ITEMS = [
 
     # --- بازی ---
     ("game", "جدول یا بازی کلمات", "", "", {"focus": 2, "short": 3, "light": 2}, None, 15),
-    ("game", "شطرنج آنلاین", "", "", {"focus": 3, "thoughtful": 3}, None, 20),
     ("game", "یک بازی موبایلی سبک", "", "", {"light": 3, "escape": 2, "short": 3}, None, 15),
     ("game", "بازی رومیزی با دوستان", "", "", {"social": 3, "funny": 2}, None, 60),
     ("game", "شب بازی و پیتزا", "", "دورهمی خونگی با یه بازی گروهی.", {"social": 3, "funny": 2, "indoor": 2, "comfort": 1}, None, 120),
 ]
+
+RETIRED_TITLES = [
+    "سپیده‌دم یک زن",
+    "دگرگون",
+    "پادکست تاریخ",
+    "چرا خواب کافی مهم‌ترین کار امروز توست",
+    "تکنیک پومودورو در ۵ دقیقه",
+    "چطور از فرسودگی ذهنی بیرون بیاییم",
+    "قانون دو دقیقه برای شروع کارها",
+    "کافه‌ای دنج در ولیعصر",
+    "کتاب‌فروشی و کافه در انقلاب",
+    "قدم زدن روی سی‌وسه پل",
+    "کافه‌ای در نقش جهان",
+    "پیاده‌روی در چهارباغ",
+    "رستوران سنتی در بازار تهران",
+    "شام با دوستا در جردن",
+    "کافه‌ی بام‌دار در دربند",
+    "رستوران کنار زاینده‌رود",
+    "عصرانه در جلفا",
+]
+
+
+def build_all_items():
+    items = []
+    for cat_slug, title, subtitle, description, tags, city_slug, duration in ITEMS:
+        url = taaghche_search(title) if cat_slug == "book" else ""
+        items.append((cat_slug, title, subtitle, description, tags, city_slug, duration, url))
+    return items + build_linked_items()
 
 
 class Command(BaseCommand):
@@ -396,7 +395,9 @@ class Command(BaseCommand):
             occasion.tags.set([tags[slug] for slug in occasion_tags])
 
         cities = {city.slug: city for city in City.objects.all()}
-        for cat_slug, title, subtitle, description, item_tags, city_slug, duration in ITEMS:
+        Item.objects.filter(title__in=RETIRED_TITLES).delete()
+
+        for cat_slug, title, subtitle, description, item_tags, city_slug, duration, url in build_all_items():
             item, _ = Item.objects.update_or_create(
                 category=categories[cat_slug],
                 title=title,
@@ -405,6 +406,7 @@ class Command(BaseCommand):
                     "description": description,
                     "city": cities.get(city_slug) if city_slug else None,
                     "duration_minutes": duration,
+                    "external_url": url,
                     "is_active": True,
                 },
             )

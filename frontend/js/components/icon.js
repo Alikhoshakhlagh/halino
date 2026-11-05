@@ -18,6 +18,7 @@ const ICONS = {
   "chevron-left": '<path d="m15 18-6-6 6-6"/>',
   "chevron-right": '<path d="m9 18 6-6-6-6"/>',
   "chevron-down": '<path d="m6 9 6 6 6-6"/>',
+  "external-link": '<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   x: '<path d="M18 6 6 18M6 6l12 12"/>',
   clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',

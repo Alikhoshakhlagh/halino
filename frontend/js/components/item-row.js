@@ -1,5 +1,8 @@
 function createItemMeta(item, because, statusLabel) {
   const parts = [item.category.name];
+  if (item.subtitle) {
+    parts.push(item.subtitle);
+  }
   if (because) {
     parts.push(`به مناسبت ${because}`);
   }

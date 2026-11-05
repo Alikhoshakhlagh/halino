@@ -42,8 +42,6 @@ def category_detail_view(request, slug):
     items = Item.objects.filter(category=category, is_active=True).select_related(
         "category", "city"
     )
-    if category.needs_city:
-        items = items.filter(city=request.user.city)
 
     statuses = {
         row.item_id: row
@@ -57,7 +55,10 @@ def category_detail_view(request, slug):
         row["status"] = status.status if status else ""
         row["status_label"] = status.get_status_display() if status else ""
         rows.append(row)
-    return Response({"category": CategorySerializer(category).data, "items": rows})
+    user_city = request.user.city.name if request.user.city else ""
+    return Response(
+        {"category": CategorySerializer(category).data, "items": rows, "user_city": user_city}
+    )
 
 
 @api_view(["GET"])

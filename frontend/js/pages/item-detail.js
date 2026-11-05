@@ -4,6 +4,27 @@ renderTabbar("categories");
 const page = document.getElementById("item-page");
 const itemId = new URLSearchParams(window.location.search).get("id");
 
+const LINK_LABELS = {
+  film: "دیدن صفحه‌ی فیلم",
+  series: "دیدن صفحه‌ی سریال",
+  book: "پیدا کردن توی طاقچه",
+  podcast: "گوش دادن به پادکست",
+  article: "خوندن مقاله",
+  cafe: "دیدن روی نقشه",
+  game: "باز کردن بازی",
+};
+
+function createExternalLink(item) {
+  if (!item.external_url) return "";
+
+  const label = LINK_LABELS[item.category.slug] || "باز کردن لینک";
+  return `
+    <a class="btn btn--primary btn--block" href="${escapeHtml(item.external_url)}" target="_blank" rel="noopener noreferrer">
+      ${createIcon("external-link", "icon--small")} ${label}
+    </a>
+  `;
+}
+
 function createBanner(item) {
   const art = item.image_url
     ? `<img class="item-banner__image" src="${escapeHtml(item.image_url)}" alt="">`
@@ -61,7 +82,7 @@ function createActions(item) {
         <label class="label" for="rating">اگه انجامش دادی، چند می‌دی؟</label>
         <select class="input" id="rating">${createRatingOptions(item.rating)}</select>
       </div>
-      <button type="button" class="btn btn--primary btn--block" data-item-action="done">
+      <button type="button" class="btn btn--ghost btn--block" data-item-action="done">
         ${createIcon("check", "icon--small")} انجام دادم
       </button>
       <div class="item-actions">
@@ -92,6 +113,7 @@ function renderItem(item) {
       ${createTags(item.tags)}
       ${createDescription(item.description)}
       ${createMeta(item)}
+      ${createExternalLink(item)}
     </section>
     ${createActions(item)}
   `;
